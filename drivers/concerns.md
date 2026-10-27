@@ -7,7 +7,7 @@
 + CON-4: Presentar implementacion prototipo luego de varias iteraciones.
 
 + CON-5: Guiarnos por el siguiente listado de tareas para cada iteración:
- + Iteration I: Choose reference architecture (architectural styles)
- + Iteration II:  Primary functionality y technology selection
- + Iteration III: QA trade offs, tactics and refinament
- + Iteration IV: More desicions and Improvements
+    + Iteration I: Choose reference architecture (architectural styles)
+    + Iteration II:  Primary functionality y technology selection
+    + Iteration III: QA trade offs, tactics and refinament
+    + Iteration IV: More desicions and Improvements

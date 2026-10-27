@@ -5,6 +5,7 @@
 + Mail provider
 + Analistas
 
+# Functional requirements
 
 - FR-1: El usuario debe poder ver todas sus reservas (hospedaje y transporte) existentes cruzando info de diferentes apps (APIs estandar).
 - FR-2: El sistema debe estar conectado con email para capturar automaticamente las reservas.

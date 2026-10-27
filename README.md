@@ -3,8 +3,8 @@
 A continuación presentamos el diseño/arquitectura de software que llevamos a cabo para la implementación del sistema propuesto *Trotamundos*
 
 ## Drivers
-+ [Requerimientos funcionales](./drivers/requerimientos.md)
-+ [Atributos de calidad](./drivers/atributos.md)
++ [Requerimientos funcionales](./drivers/func-rqmts.md)
++ [Atributos de calidad](./drivers/QA.md)
 + [Constraints](./drivers/constraints.md)
 + [Concerns](./drivers/concerns.md)
 
