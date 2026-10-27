@@ -9,5 +9,5 @@
 + CON-5: Guiarnos por el siguiente listado de tareas para cada iteración:
  + Iteration I: Choose reference architecture (architectural styles)
  + Iteration II:  Primary functionality y technology selection
- + Iteration III: QA trade offs, tactics and refinament
- + Iteration IV: More desicions and Improvements
+ + Iteration III: QA trade offs, tactics and refinement
+ + Iteration IV: More decisions and Improvements

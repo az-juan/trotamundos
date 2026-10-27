@@ -2,13 +2,14 @@
 |-----------|-----------|-------------------|-------------------|
 | **Lenguaje backend** | Go | 1.23+ | Servicios, Gateway, Web BFF, tooling |
 | **Lenguaje iOS** | Swift | 5.9+ | App nativa iOS |
-| **Lenguage Android** | Kotlin | 1.9+ | App nativa Android |
+| **Lenguaje Android** | Kotlin | 1.9+ | App nativa Android |
 | **UI iOS** | SwiftUI + MVVM | — | Interfaz nativa iOS |
 | **UI Android** | Jetpack Compose + MVVM + Hilt | — | Interfaz nativa Android |
 | **Web templating** | templ | latest | Templates compilados a `.go` |
 | **Web interactividad** | htmx | 1.9+ | Swap de fragmentos, SSE, polling |
 | **Web CSS** | Tailwind CSS | 3.x | Utilidades CSS → build estático |
 | **Web HTTP server** | Chi | v5 | Router del BFF web |
+| **Mobile BFF** | Go · Chi (JSON) | v5 | Agregación JSON para app nativa (uno por experiencia) |
 | **Gateway framework** | Chi + oapi-codegen | v5 | Routing, auth, rate limit, proxy |
 | **Broker** | NATS JetStream | 2.10+ | Event bus entre servicios |
 | **DB OLTP** | PostgreSQL | 16 | Reservas, viajes, usuarios, whitelists |
