@@ -1,9 +1,10 @@
 # Actores
 + Usuarios (móvil y web)
-+ Aplicación externa de viajes
++ Aplicaciónes externas de viajes
 + Agencias de viajes
 + Mail provider
-+ Analistas
++ Analistas de datos
++ Proveedores de redes sociales
 
 # Functional requirements
 
