@@ -1,3 +1,3 @@
 El objetivo es construir la próxima generación de un panel de gestión de viajes
-en línea para permitir a los viajeros ver todas sus reservas existentes organizadas por viaje, ya sea a través de la web o desde su dispositivo móvil. El objetivo es ofrecer un único punto de verdad para todos los arreglos de viaje (hoteles, autos, vuelos, trenes, autobuses) en una interfaz simple centrada en el viaje, mitigando la
-frustración de rastrear múltiples aplicaciones y bandejas de correo.
+en línea para permitir a los viajeros ver todas sus reservas existentes organizadas por viaje, ya sea a través de la web o desde su dispositivo móvil. El objetivo es ofrecer un único punto de verdad para todos los arreglos de viaje (hoteles, autos, vuelos, trenes, autobuses) en una interfaz simple centrada en el viaje, mitigando la frustración de rastrear múltiples aplicaciones y bandejas de correo.
+Para ello, el sistema deberá ser capaz de conectar informacion de diferentes proveedores para mostrarla en su interfaz.
