@@ -31,3 +31,5 @@ El diseño hexagonal se debe a lograr una independencia entre la lógica de cada
 + [ADR 010: Analitica - ClickHouse con Batch Ingest](./adrs/adr-010.md)
 + [ADR 011: Mobile nativo (Swift + Kotlin)](./adrs/adr-011.md)
 + [ADR 012: Deploy - Docker Compose + GitHub Actions en DigitalOcean](./adrs/adr-012.md)
+
+![Pater-Spiritus-Filius](./images/Pater-Spiritus-Filius.png)
