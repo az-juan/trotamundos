@@ -1,6 +1,6 @@
 # ADR-103: Comunicación inter-unidad — el triángulo de conectores
 
-* **Estado:** Propuesto (rama `main-trinity`)
+* **Estado:** Aceptado (rama `main-trinity`)
 * **Fecha:** 2026-10-28
 * **Decidido por:** Equipo de arquitectura
 * **Iteración ADD:** III (tácticas de interacción, resiliencia y desacoplamiento)

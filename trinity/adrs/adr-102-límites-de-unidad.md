@@ -1,6 +1,6 @@
 # ADR-102: Límites de unidad y modularidad interna
 
-* **Estado:** Propuesto (rama `main-trinity`)
+* **Estado:** Aceptado (rama `main-trinity`)
 * **Fecha:** 2026-10-28
 * **Decidido por:** Equipo de arquitectura
 * **Iteración ADD:** I–II (refinamiento de elementos y responsabilidades)

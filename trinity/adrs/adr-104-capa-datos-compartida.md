@@ -1,6 +1,6 @@
 # ADR-104: Capa de datos compartida con segregación por esquema
 
-* **Estado:** Propuesto (rama `main-trinity`)
+* **Estado:** Aceptado (rama `main-trinity`)
 * **Fecha:** 2026-10-28
 * **Decidido por:** Equipo de arquitectura
 * **Iteración ADD:** II (persistencia y refinamiento)

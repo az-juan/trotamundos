@@ -1,6 +1,6 @@
 # ADR-101: Trinidad — tres unidades modulares en lugar de N microservicios
 
-* **Estado:** Propuesto (rama `main-trinity`)
+* **Estado:** Aceptado (rama `main-trinity`)
 * **Fecha:** 2026-10-28
 * **Decidido por:** Equipo de arquitectura
 * **Iteración ADD:** I (re-elección del estilo macro / referencia)

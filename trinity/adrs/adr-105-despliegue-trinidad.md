@@ -1,6 +1,6 @@
 # ADR-105: Despliegue — 3 contenedores, Docker Compose, GitHub Actions, DigitalOcean
 
-* **Estado:** Propuesto (rama `main-trinity`)
+* **Estado:** Aceptado (rama `main-trinity`)
 * **Fecha:** 2026-10-28
 * **Decidido por:** Equipo de arquitectura
 * **Iteración ADD:** IV (preparación del prototipo y decisiones operativas)
