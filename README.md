@@ -22,7 +22,7 @@ Toda la documentación de la arquitectura vive en [`trinity/`](./trinity/):
 | **Detalle por unidad** | [`trinity/units/`](./trinity/units/) | Pater · Filius · Spiritus + catálogo de eventos |
 | **Decisiones (ADR)** | [`trinity/adrs/`](./trinity/adrs/) | ADR-101..105 (Trinidad) + ADR-001..014 (heredados/adaptados) |
 | **Drivers** | [`trinity/drivers/`](./trinity/drivers/) | Requerimientos, atributos de calidad, constraints, concerns |
-| **Registro de evolución** | [`trinity/registres/`](./trinity/registres/) | Changelog, deuda arquitectónica, criterios de transición |
+| **Registro de evolución** | [`trinity/registers/`](./trinity/registers/) | Changelog, deuda arquitectónica, criterios de transición |
 | **Especificación rectora** | [`skills/SPEC_ARCHITECTURE.md`](./skills/SPEC_ARCHITECTURE.md) | Marco ADD 3.0 + SDD |
 
 ## Por qué Trinidad

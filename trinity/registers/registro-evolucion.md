@@ -39,7 +39,7 @@ Changelog cronológico de los cambios de documentación de la arquitectura **Tri
 
 - **Tipo:** reorganización estructural + nueva documentación de detalle + nuevo directorio de gobernanza.
 - **Artefactos:**
-  - `README.md` — **reenmarcado**: de «propuesta alternativa» a **arquitectura elegida**; título y tabla de documentación actualizadas con `units/` y `registres/`.
+  - `README.md` — **reenmarcado**: de «propuesta alternativa» a **arquitectura elegida**; título y tabla de documentación actualizadas con `units/` y `registers/`.
   - `adrs/adr-101..105` — estatus **Propuesto → Aceptado** (refleja la elección formal; la justificación y las 3+ opciones se conservan, SPEC §5).
   - `units/` **(nuevo)** — detalle por unidad, análogo a `../microservices/01..09`:
     - `README.md` — índice, triángulo de unidades, trazabilidad drivers → unidades.
@@ -48,7 +48,7 @@ Changelog cronológico de los cambios de documentación de la arquitectura **Tri
     - `03-filius-nucleo.md` — Itinerary · Integration.
     - `04-spiritus-mente.md` — Email Ingest · Analytics.
     - `05-catalogo-eventos.md` — eventos NATS **restringidos a la arista Filius↔Spiritus**.
-  - `registres/` **(nuevo)** — registro de evolución: `README.md`, `registro-evolucion.md` (este archivo), `deuda-arquitectonica.md`, `transiciones.md`.
+  - `registers/` **(nuevo)** — registro de evolución: `README.md`, `registro-evolucion.md` (este archivo), `deuda-arquitectonica.md`, `transiciones.md`.
 - **Motivo:** presentar a Trinity como la arquitectura escogida, mantener los ADRs y drivers adecuados, y registrar la evolución conforme a la SPEC (Paso 8).
 - **Trazabilidad:** SPEC-001 §5 (MADR con ≥3 opciones), Paso 8 (cierre de gobernanza), CON-3 (vistas + ADRs), Regla 2 (coherencia).
 - **Verificación:** todos los bloques mermaid nuevos validados con el parser real; sin tablas corruptas.

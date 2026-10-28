@@ -32,7 +32,7 @@ graph LR
     ADR["adrs/<br/>ADR-101..105 (decisiones)"]
     VISTAS["architecture/<br/>módulos · cyc · despliegue"]
     UNITS["units/<br/>detalle por unidad"]
-    REG["registres/<br/>(este directorio · evolución)"]
+    REG["registers/<br/>(este directorio · evolución)"]
     SPEC --> ADR
     SPEC --> VISTAS
     ADR --> VISTAS

@@ -94,7 +94,7 @@ reutilizan casi intactas:
 | **Vista de componentes y conectores** (runtime, cyc) | [architecture/vista_cyc.md](./architecture/vista_cyc.md) | `../architecture/vista_cyc.md` |
 | **Vista de despliegue** (asignación a infra) | [architecture/vista_despliegue.md](./architecture/vista_despliegue.md) | `../architecture/vista_despliegue.md` |
 | **Detalle por unidad** (código + dominio + contratos) | [units/](./units/README.md) | `../microservices/01..09` |
-| **Registro de evolución** (changelog, deuda, transiciones) | [registres/](./registres/README.md) | — (nuevo, conforme a SPEC §5/Paso 8) |
+| **Registro de evolución** (changelog, deuda, transiciones) | [registers/](./registers/README.md) | — (nuevo, conforme a SPEC §5/Paso 8) |
 | ADR-101 Trinidad: 3 unidades en vez de N microservicios | [adrs/adr-101-trinidad.md](./adrs/adr-101-trinidad.md) | (adapta ADR-001) |
 | ADR-102 Límites de unidad y modularidad interna | [adrs/adr-102-límites-de-unidad.md](./adrs/adr-102-límites-de-unidad.md) | (adapta ADR-001/002/013) |
 | ADR-103 Comunicación inter-unidad (triángulo) | [adrs/adr-103-comunicacion-inter-unidad.md](./adrs/adr-103-comunicacion-inter-unidad.md) | (adapta ADR-005/006/013) |

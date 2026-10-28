@@ -76,7 +76,7 @@ trotamundos/
 ├── docs/
 │   ├── api/openapi.yaml          # spec-driven: rutas del Gateway + BFFs (Pater)
 │   └── events/events.yaml        # esquemas JSON de los eventos NATS (arista Filius↔Spiritus)
-└── architecture/ · adrs/ · registres/   # vistas, decisiones, registro de evolución
+└── architecture/ · adrs/ · registers/   # vistas, decisiones, registro de evolución
 ```
 
 > **Por qué 3 módulos y no 7** (ADR-101/102): los servicios de `main` comparten perfil de carga dentro
