@@ -1,57 +1,133 @@
 ```mermaid
-    graph LR
-    subgraph "Email Ingest — Goroutines"
-        IMAP_W["IMAP IDLE Workers<br/>(1 por usuario, max 500)"]
-        GMAIL_W["Gmail Push Handler<br/>(1 por webhook)"]
-        PARSE_POOL["Parser Pool<br/>(10–50 goroutines, chan)"]
-        EI_NATS_P["NATS Producer<br/>(booking.discovered)"]
-        IMAP_W -->|"chan Email"| PARSE_POOL
-        GMAIL_W -->|"chan Email"| PARSE_POOL
-        PARSE_POOL -->|"publish"| EI_NATS_P
-    end
+graph LR
+    CLIENT["Web / Mobile / Terceros"] -->|"REST (JWT RS256)"| GW["API Gateway"]
+    GW -->|"REST"| WEBBFF["Web BFF<br/>HTML/htmx"]
+    GW -->|"REST"| MOBBFF["Mobile BFF<br/>JSON"]
+    WEBBFF -->|"REST interno"| IT["Itinerary"]
+    WEBBFF -->|"REST interno"| IN["Integration"]
+    MOBBFF -->|"REST interno"| IT
+    MOBBFF -->|"REST interno"| IN
+    EI["Email Ingest"] -. "booking.discovered" .-> NATS["NATS JetStream<br/>Event Bus"]
+    IT -. "booking.confirmed · trip.*" .-> NATS
+    IN -. "booking.confirmed · trip.disrupted" .-> NATS
+    NATS -. "consume" .-> IT
+    NATS -. "consume" .-> AN["Analytics"]
+    NATS -. "consume" .-> NT["Notification<br/>(Fase 1)"]
+    IN <-->|"REST resiliente"| EXT["Aerolíneas · Hoteles · Rentadoras"]
+    EI <-->|"OAuth2 / IMAP"| MAIL["Gmail · IMAP"]
+    IT -->|"SQL"| PG[("PostgreSQL")]
+    IT -->|"cache"| RD[("Redis")]
+    AN -->|"SQL batch"| CH[("ClickHouse")]
+    style GW fill:#2d2d44,stroke:#7c6ff7,color:#fff
+    style NATS fill:#1a3a2a,stroke:#4caf50,color:#fff
+```
 
-    subgraph "Itinerary — Goroutines"
-        IT_HTTP["HTTP Server<br/>(chi, goroutine por request)"]
-        IT_NATS_C["NATS Consumer<br/>(booking.cancelled, trip.disrupted)"]
-        IT_PUSH["Push Sender<br/>(goroutine por notificación)"]
-        IT_HTTP -->|"usecase"| IT_NATS_C
-        IT_NATS_C -->|"publish"| IT_PUSH
-    end
+## Propósito de esta vista (component-and-connector, Bass ch.1/22)
 
-    subgraph "Integration — Goroutines"
-        INT_WEBHOOK["Webhook Handler<br/>(goroutine por callback)"]
-        INT_SYNC["Sync Workers<br/>(cron, 1 por proveedor)"]
-        INT_NATS_C["NATS Consumer<br/>(booking.discovered)"]
-        CB["CircuitBreaker<br/>(1 por proveedor)"]
-        INT_WEBHOOK --> CB
-        INT_SYNC --> CB
-        INT_NATS_C --> CB
-        CB -->|"HTTP call"| EXT["APIs Externas"]
-    end
+Vista de **Componentes y Conectores (C&C)**: estructura de **runtime**. Muestra **cómo interactúan los
+componentes dinámicamente** para ejecutar los escenarios del sistema. Conectores usados:
 
-    subgraph "Analytics — Goroutines"
-        AN_NATS_C["NATS Consumer<br/>(todos los eventos)"]
-        AN_BUF["Buffer<br/>(5000 rows / 5s)"]
-        AN_FLUSH["Flush Goroutine<br/>(batch insert CH)"]
-        AN_NATS_C --> AN_BUF --> AN_FLUSH
-    end
+- **REST** (síncrono, request-response): cliente→Gateway→BFF→servicios de dominio.
+- **NATS JetStream** (asíncrono, event-driven): propagación de hechos; cada consumidor reacciona por
+  su cuenta (invertir responsabilidad, Newman ch.4).
+- **SQL** (servicio→su base de datos) y **REST externo resiliente** (Integration→proveedores).
 
-    subgraph "Gateway — Goroutines"
-        GW_HTTP["HTTP Server<br/>(goroutine por request)"]
-        GW_RATE["Rate Limiter<br/>(Redis token bucket)"]
-        GW_AUTH["JWT Validator<br/>(stateless)"]
-        GW_HTTP --> GW_AUTH --> GW_RATE --> GW_HTTP
-    end
+## Escenario 1 — Reserva descubierta por email (flujo event-driven)
 
-    subgraph "Web BFF — Goroutines"
-        W_HTTP["HTTP Server<br/>(chi, goroutine por request)"]
-        W_SSE["SSE Stream<br/>(1 goroutine por conexión)"]
-        W_HTTP --> W_SSE
-    end
+```mermaid
+sequenceDiagram
+    participant M as Mail (Gmail/IMAP)
+    participant EI as Email Ingest
+    participant N as NATS JetStream
+    participant IT as Itinerary
+    participant IN as Integration
+    participant AN as Analytics
+    M->>EI: correo nuevo (IDLE / webhook)
+    EI->>EI: dedup SHA256 + whitelist
+    EI->>EI: parse (regex → template)
+    EI->>N: publish booking.discovered
+    N->>IT: booking.discovered
+    N->>IN: booking.discovered
+    N->>AN: booking.discovered
+    IT->>IT: crea/actualiza booking (tx ACID local)
+    IN->>IN: fetch detalle al proveedor (resiliente)
+    IT->>N: publish booking.confirmed
+    IN->>N: publish booking.confirmed (con detalle)
+    Note over IT,AN: Cada servicio reacciona de forma independiente; sin tx distribuida (Newman ch.6)
+```
 
-    subgraph "Mobile BFF — Goroutines"
-        MB_HTTP["HTTP Server (JSON)<br/>(chi, goroutine por request)"]
-        MB_AGG["Aggregator<br/>(llamadas a Itinerary/Integration)"]
-        MB_HTTP --> MB_AGG
+## Escenario 2 — Usuario ve su itinerario en la web (síncrono)
+
+```mermaid
+sequenceDiagram
+    participant U as Browser
+    participant NG as Nginx (TLS)
+    participant GW as API Gateway
+    participant WB as Web BFF
+    participant IT as Itinerary
+    participant R as Redis / PostgreSQL
+    U->>NG: GET /trips/123 (HTTPS)
+    NG->>GW: proxy
+    GW->>GW: validar JWT RS256 (JWKS) + rate limit
+    GW->>WB: route (X-Correlation-ID)
+    WB->>IT: GET booking/trip 123
+    IT->>R: lectura (cache → PG)
+    R-->>IT: trip + bookings
+    IT-->>WB: vista
+    WB->>WB: render templ + i18n
+    WB-->>U: HTML completo (FCP < 1.4 s, sin hydration)
+```
+
+## Escenario 3 — Disrupción de proveedor (webhook → notificación)
+
+```mermaid
+sequenceDiagram
+    participant P as Proveedor
+    participant IN as Integration
+    participant N as NATS JetStream
+    participant IT as Itinerary
+    participant NT as Notification (Fase 1)
+    participant AN as Analytics
+    P->>IN: POST /webhooks/{provider} (X-Signature)
+    IN->>IN: verificar firma HMAC + idempotencia (Redis)
+    IN->>IN: mapear a booking canónico
+    IN->>N: publish trip.disrupted
+    N->>IT: actualizar estado del booking/trip
+    N->>NT: avisar al usuario (push/email)
+    N->>AN: ingesta (batch)
+    IT->>N: (si aplica) publish booking.cancelled
+```
+
+## Escenario 4 — Llamada resiliente a proveedor (cadena de protección)
+
+```mermaid
+sequenceDiagram
+    participant U as Origen (BFF / webhook / cron)
+    participant INT as Integration
+    participant CB as CircuitBreaker
+    participant RT as Retry + RateLimiter
+    participant H as HTTP Client (timeout)
+    participant EXT as Proveedor
+    U->>INT: request (context timeout)
+    INT->>CB: llamar por proveedor
+    alt breaker abierto (≥5 fallos)
+        CB-->>U: fallback → "datos desactualizados"
+    else cerrado
+        CB->>RT: retry (429/5xx/timeout, exp+jitter)
+        RT->>H: rate limit (token bucket)
+        H->>EXT: GET /booking/{ref}
+        alt respuesta ok
+            EXT-->>U: datos → mapeo a canónico
+        else fallos repetidos
+            H-->>CB: fallo → abrir breaker (30 s)
+        end
     end
 ```
+
+## Leyenda
+
+- **Flecha sólida** = llamada síncrona (request-response, con timeout). · **Flecha punteada** = evento
+  NATS JetStream (asíncrono; el productor publica, el consumidor es dueño de su reacción).
+- Cada escenario usa **correlation-id** propagado (OTel) para trazabilidad de extremo a extremo.
+- Los servicios **no comparten base de datos**; solo se comunican por REST (síncrono) o eventos
+  (asíncrono). Ver detalle por servicio en `microservices/02..05`.

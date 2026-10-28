@@ -1,7 +1,6 @@
 # Trotamundos — Descomposición en Microservicios
 
-Documentación de detalle por microservicio del sistema **Trotamundos** (centralización de
-viajes y reservas provenientes de múltiples aplicaciones). Este paquete profundiza el diseño
+Documentación de detalle por microservicio. Este paquete profundiza el diseño
 ya aprobado en los ADRs (`../adrs/`) y las vistas (`../architecture/`), aplicando **ADD**
 (Attribute-Driven Design, 4 iteraciones) y **SDD** (Spec-Driven Development) con contratos
 OpenAPI / JSON-Schema.

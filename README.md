@@ -18,6 +18,9 @@ El diseño hexagonal se debe a lograr una independencia entre la lógica de cada
 + [Vista de componentes y conectores](./architecture/vista_cyc.md)
 + [Vista de asignaciones/despliegue](./architecture/vista_despliegue.md)
 
+A continuación una descripción mas detallada de la arquitectura, haciendo foco en cada componente del sistema:
++ [Descomposición en microservicios](./microservices/README.md)
+
 ## ADRs
 + [ADR 001: División en microservicios + Web + Gateway](./adrs/adr-001)
 + [ADR 002: Arquitectura hexagonal por microservicio](./adrs/adr-002)
