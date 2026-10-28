@@ -99,5 +99,22 @@ sequenceDiagram
 | QA-10 (compartir con permisos) | `ItineraryShare` con `ShareToken` y permisos de visualización |
 | QA-11 (nuevos medios) | nuevo adaptador de proveedor sin tocar dominio (hexagonal) |
 
+## 6. Contratos de proveedores (módulo `integration/`)
+
+Adaptadores por proveedor (hexagonal, ADR-002 inalterado). Cada proveedor implementa el puerto `ExternalClient`.
+
+| Proveedor | Tipo | Autenticación | Webhook | Idempotencia |
+|-----------|------|---------------|---------|--------------|
+| Aerolíneas (NDC/REST) | REST | OAuth2 / API key | HMAC-SHA256 (`X-Signature`) | por `provider_ref` + `Idempotency-Key` |
+| Hoteles (REST) | REST | API key | HMAC-SHA256 | por `provider_ref` |
+| Rentadoras (REST) | REST | OAuth2 | HMAC-SHA256 | por `provider_ref` |
+| Gmail | Gmail API (push + labels) | OAuth2 | push notification | por `message_id` |
+| IMAP genérico (Outlook, etc.) | IMAP IDLE | usuario/contraseña o OAuth2 | polling/IDLE | por `sha256` del correo |
+
+- **Cadena de resiliencia (ADR-007):** `CircuitBreaker → Retry (exp+jitter) → RateLimiter (token bucket) → HTTP`, todo en `shared/resilient`.
+- **Timeouts:** 5 s por llamada; 30 s para el breaker abierto antes de half-open.
+- **Mapeo a canónico:** `MapToCanonical` traduce el payload del proveedor al `Booking` canónico (FR-4, FR-6).
+- **Webhook inválido:** va a dead letter (`email.>` / `booking.>` stream) + alerta; no se procesa.
+
 > Vistas complementarias: `../architecture/vista_cyc.md` (escenarios 1, 3 y 4) y `../architecture/vista_despliegue.md`
 > (contenedor `filius`). Catálogo de eventos: [05-catalogo-eventos.md](./05-catalogo-eventos.md).

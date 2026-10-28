@@ -1,5 +1,8 @@
 ## ADR-013: BFF por experiencia (Web + Mobile) tras el API Gateway
 
+> ⚠️ **Procedencia:** este ADR describe la propuesta original de microservicios (`main`). La decisión vigente para la Trinidad es ADR-101..105. Se conserva como procedencia y adaptación; no es la decisión activa.
+
+
 **Status**: Aceptado
 **Fecha**: 2026-10-27
 **Decidido por**: Equipo de arquitectura

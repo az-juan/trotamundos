@@ -234,6 +234,38 @@ graph LR
 | **Filius** | `filius` (escribe) | Redis (idempotencia) | `booking.confirmed/cancelled/disrupted`, `trip.*` | `booking.discovered` | Aerolíneas/hoteles/rentadoras (resiliente) |
 | **Spiritus** | `spiritus` (escribe) | Redis (dedup) | `booking.discovered` | `booking.*`, `trip.*` | Gmail API, IMAP |
 
+## 7. Observabilidad (métricas concretas)
+
+Ver `trinity/ops/operaciones.md` §1. Resumen de métricas Prometheus expuestas por cada unidad en `/metrics`:
+
+| Métrica | Tipo | Unidad | Descripción |
+|---------|------|--------|-------------|
+| `http_requests_total` | counter | todas | por método, ruta, status |
+| `http_request_duration_seconds` | histogram | todas | latencia p50/p95/p99 |
+| `breaker_state` | gauge | filius | 0=closed, 1=open, 2=half-open (por proveedor) |
+| `retry_attempts_total` | counter | filius | por proveedor |
+| `rate_limit_hits_total` | counter | pater/filius | por cliente/proveedor |
+| `nats_consumer_lag` | gauge | spiritus | lag del consumer de analytics |
+| `email_parse_total` | counter | spiritus | por resultado (matched/no_match/failed) |
+| `email_parse_duration_seconds` | histogram | spiritus | duración del parseo |
+| `idempotency_hits_total` | counter | todas | reentregas deduplicadas |
+
+## 8. Variables de entorno por unidad
+
+Ver `.env.example` (raíz) y `trinity/dev/setup-local.md` §3. Cada unidad carga solo las suyas vía `shared/config` (env + archivo). El artefacto (binario Go) es único; la config varía por entorno (Newman ch.7).
+
+## 9. Error envelope (convención)
+
+Toda respuesta de error usa el schema `Error` de `docs/api/openapi.yaml`:
+
+```json
+{ "code": "BOOKING_NOT_FOUND", "message": "…", "correlation_id": "…", "details": { } }
+```
+
+- Códigos `UPPER_SNAKE_CASE`, estables (parte del contrato).
+- HTTP status: 400 validación, 401 auth, 403 permisos, 404 no encontrado, 409 conflicto/idempotencia, 502 upstream, 503 no disponible, 504 timeout.
+- `correlation_id` en header `X-Correlation-ID` y en body.
+
 > **PostgreSQL es compartido con esquemas segregados** (ADR-104): cada unidad escribe **solo** en su
 > esquema (`pater`/`filius`/`spiritus`); lo que necesita de otra unidad viene por contrato (evento o
 > read-model), nunca por escribir en el esquema ajeno. **ClickHouse** es exclusivo de Spiritus (OLAP).

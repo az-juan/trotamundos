@@ -1,0 +1,195 @@
+# Trotamundos — Event Schemas (NATS JetStream, arista Filius <-> Spiritus)
+# Fuente de verdad de los payloads de eventos. Los tipos Go se generan/consumen desde shared/event.
+# Formato: JSON (no Avro, por simplicidad). CloudEvents envelope (specversion 1.0).
+# Restriccion trinitaria (ADR-103): NATS se usa SOLO en la arista Filius<->Spiritus.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Trotamundos Events Catalog
+description: Catalogo de eventos de la arista Filius<->Spiritus (NATS JetStream).
+
+# ---------------------------------------------------------------------------
+# Envelope comun (CloudEvents 1.0)
+# ---------------------------------------------------------------------------
+definitions:
+  Envelope:
+    type: object
+    required: [id, specversion, type, source, correlation-id, occurred-at, payload]
+    properties:
+      id: { type: string, description: "ULID/UUID v7 idempotente del evento" }
+      specversion: { type: string, enum: ["1.0"] }
+      type: { type: string, description: "subject (dominio.accion)" }
+      source: { type: string, enum: [filius, spiritus], description: "unidad emitora" }
+      correlation-id: { type: string, description: "propagado por OTel" }
+      traceparent: { type: string, description: "W3C trace context" }
+      occurred-at: { type: string, format: date-time }
+      payload: { type: object }
+
+  # ---------------------------------------------------------------------------
+  # 1. booking.discovered — publicado por Spiritus (email-ingest)
+  # ---------------------------------------------------------------------------
+  BookingDiscovered:
+    allOf:
+      - $ref: "#/definitions/Envelope"
+      - type: object
+        properties:
+          type: { const: "booking.discovered" }
+          source: { const: spiritus }
+          payload:
+            type: object
+            required: [provider, provider_ref, type, confidence, mailbox_id]
+            properties:
+              provider: { type: string }
+              provider_ref: { type: string }
+              type: { type: string, enum: [lodging, transport, car_rental] }
+              passengers:
+                type: array
+                items:
+                  type: object
+                  required: [name]
+                  properties:
+                    name: { type: string }
+                    document: { type: string }
+              segments:
+                type: array
+                items:
+                  type: object
+                  required: [from, to, at]
+                  properties:
+                    from: { type: string }
+                    to: { type: string }
+                    at: { type: string, format: date-time }
+              confidence: { type: number, minimum: 0, maximum: 1 }
+              mailbox_id: { type: string }
+
+  # ---------------------------------------------------------------------------
+  # 2. booking.confirmed — publicado por Filius (integration o itinerary)
+  # ---------------------------------------------------------------------------
+  BookingConfirmed:
+    allOf:
+      - $ref: "#/definitions/Envelope"
+      - type: object
+        properties:
+          type: { const: "booking.confirmed" }
+          source: { const: filius }
+          payload:
+            type: object
+            required: [booking_id, trip_id, provider, provider_ref, status, confirmed_at]
+            properties:
+              booking_id: { type: string }
+              trip_id: { type: string }
+              provider: { type: string }
+              provider_ref: { type: string }
+              status: { const: confirmed }
+              confirmed_at: { type: string, format: date-time }
+
+  # ---------------------------------------------------------------------------
+  # 3. booking.cancelled — publicado por Filius (integration)
+  # ---------------------------------------------------------------------------
+  BookingCancelled:
+    allOf:
+      - $ref: "#/definitions/Envelope"
+      - type: object
+        properties:
+          type: { const: "booking.cancelled" }
+          source: { const: filius }
+          payload:
+            type: object
+            required: [booking_id, trip_id, provider, cancelled_at]
+            properties:
+              booking_id: { type: string }
+              trip_id: { type: string }
+              provider: { type: string }
+              cancelled_at: { type: string, format: date-time }
+              reason: { type: string, enum: [user, provider, system] }
+
+  # ---------------------------------------------------------------------------
+  # 4. trip.disrupted — publicado por Filius (integration)
+  # ---------------------------------------------------------------------------
+  TripDisrupted:
+    allOf:
+      - $ref: "#/definitions/Envelope"
+      - type: object
+        properties:
+          type: { const: "trip.disrupted" }
+          source: { const: filius }
+          payload:
+            type: object
+            required: [trip_id, booking_id, severity, message, disrupted_at]
+            properties:
+              trip_id: { type: string }
+              booking_id: { type: string }
+              severity: { type: string, enum: [low, medium, high] }
+              message: { type: string }
+              disrupted_at: { type: string, format: date-time }
+
+  # ---------------------------------------------------------------------------
+  # 5. trip.archived — publicado por Filius (itinerary)
+  # ---------------------------------------------------------------------------
+  TripArchived:
+    allOf:
+      - $ref: "#/definitions/Envelope"
+      - type: object
+        properties:
+          type: { const: "trip.archived" }
+          source: { const: filius }
+          payload:
+            type: object
+            required: [trip_id, archived_at]
+            properties:
+              trip_id: { type: string }
+              archived_at: { type: string, format: date-time }
+              reason: { type: string, enum: [completed, user, expired] }
+
+  # ---------------------------------------------------------------------------
+  # 6. notification.sent — publicado por Spiritus (Fase 1, modulo notification)
+  # ---------------------------------------------------------------------------
+  NotificationSent:
+    allOf:
+      - $ref: "#/definitions/Envelope"
+      - type: object
+        properties:
+          type: { const: "notification.sent" }
+          source: { const: spiritus }
+          payload:
+            type: object
+            required: [notification_id, channel, status]
+            properties:
+              notification_id: { type: string }
+              channel: { type: string, enum: [push, email, in_app] }
+              status: { type: string, enum: [queued, delivered, failed] }
+
+# ---------------------------------------------------------------------------
+# Streams y retencion (NATS JetStream)
+# ---------------------------------------------------------------------------
+streams:
+  TRIPS:
+    subjects: ["trip.>"]
+    retention: 30d
+    consumers: [filius-itinerary, spiritus-analytics]
+  BOOKINGS:
+    subjects: ["booking.>"]
+    retention: 30d
+    consumers: [filius-itinerary, spiritus-analytics]
+  EMAIL:
+    subjects: ["email.>"]
+    retention: 7d
+    purpose: "dead letter para correos sin match (reprocesamiento manual)"
+  NOTIFICATIONS:
+    subjects: ["notification.>"]
+    retention: 30d
+    consumers: [spiritus-analytics]
+
+# ---------------------------------------------------------------------------
+# Idempotencia del consumidor
+# ---------------------------------------------------------------------------
+idempotency:
+  mechanism: "dedup por id del evento en Redis (TTL 24h)"
+  applies_to: [filius-itinerary, spiritus-analytics, spiritus-email-ingest]
+  dead_letter: "stream EMAIL, retencion 7d + alerta"
+
+# ---------------------------------------------------------------------------
+# Migracion a Kafka (criterio ADR-103)
+# ---------------------------------------------------------------------------
+migration:
+  trigger: "2-de-3: equipo opera Kafka / replay > 3 meses / > 100K msg/s"
+  note: "El puerto EventPublisher/EventSinkPort permite sustituir el adaptador NATS por Kafka sin tocar dominio ni esquemas. Los subjects se mapean a topics."

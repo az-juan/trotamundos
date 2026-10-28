@@ -154,8 +154,9 @@ Pater, y para Email Ingest/Analytics dentro de Spiritus.
 - **morado** = unidades (módulos desplegable) · **azul** = `shared/` y módulos raíz (`go.work`, carpetas)
   · **verde** = dominio (estable) · **naranja** = puertos (interfaces, el contrato).
 - **Esquema de color del triángulo** (arriba, y común a las tres vistas): **morado = Pater**,
-  **verde = Filius**, **magenta = Spiritus**. (En el hexágono el verde significa *dominio*; el contexto
-  del diagrama lo distingue: en el triángulo el verde etiqueta a la unidad **Filius**.)
+  **verde = Filius**, **magenta = Spiritus**. *(Nota: en el hexágono de la sección 2 el verde
+  significa **dominio**; el contexto del diagrama lo distingue — en el triángulo el verde etiqueta a la
+  unidad **Filius**.)*
 - **Flechas sólidas** = dependencia de compilación (hacia el módulo del que se depende). En el hexágono,
   todas apuntan a `domain`/`ports` = el centro estable.
 - **Flechas punteadas** = dependencia de contrato (`shared/event`), no de implementación.

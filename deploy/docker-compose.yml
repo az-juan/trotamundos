@@ -1,0 +1,124 @@
+# Trotamundos — Docker Compose (Fase 0)
+# Fuente de verdad del despliegue. 3 contenedores Trinidad + NATS + Redis + Nginx.
+# PostgreSQL va como Managed DO (fuera del compose) en Fase 0; en local se usa el contenedor postgres.
+
+services:
+  nginx:
+    image: nginx:1.25
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      pater:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  pater:        # 🕊️ Gateway + Web BFF + Mobile BFF (un binario Go)
+    build: { context: .., dockerfile: deploy/Dockerfile, target: pater }
+    env_file: .env
+    environment:
+      - PATER_PORT=8080
+    ports: ["8080:8080"]
+    depends_on:
+      filius:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  filius:       # ✝️ Itinerary + Integration (un binario Go)
+    build: { context: .., dockerfile: deploy/Dockerfile, target: filius }
+    env_file: .env
+    environment:
+      - FILIUS_PORT=8081
+    ports: ["8081:8081"]
+    depends_on:
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  spiritus:     # 🔥 Email Ingest + Analytics (un binario Go)
+    build: { context: .., dockerfile: deploy/Dockerfile, target: spiritus }
+    env_file: .env
+    environment:
+      - SPIRITUS_PORT=8082
+    ports: ["8082:8082"]
+    depends_on:
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  nats:         # solo para la arista async Filius<->Spiritus
+    image: nats:2.10-alpine
+    command: ["-js", "-m", "8222"]
+    ports: ["4222:4222", "8222:8222"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  postgres:     # solo en local; en Fase 0 se usa Managed DO
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: trotamundos
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: trotamundos
+    ports: ["5432:5432"]
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trotamundos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+  pg_data:
+
+# PostgreSQL va como Managed DO en Fase 0 (fuera del compose) -> respaldo y HA gestionados.
+# En local se usa el contenedor postgres de arriba.
+# Red interna: todos los servicios comparten la red default de compose (bridge).

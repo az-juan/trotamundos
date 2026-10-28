@@ -90,6 +90,47 @@ sequenceDiagram
 | QA-12 (trazabilidad) | `X-Correlation-ID` inyectado y propagado por OTel a Filius/Spiritus |
 | QA-14 (canales web/móvil) | web-bff (HTML/htmx) y mobile-bff (JSON) como experiencias separadas (ADR-013) |
 
+## 6. Flujo de autenticación (JWT RS256, Fase 0)
+
+Fase 0: **el Gateway de Pater emite y valida** el JWT (ADR-014 adaptado; extracción de Identity en Fase 2).
+
+- **Emisión:** `POST /auth/login` valida credenciales contra `filius` (tabla de usuarios en esquema `filius`) y emite un JWT RS256 con claims: `sub` (user_id), `email`, `iat`, `exp` (15 min), `jti`.
+- **Validación:** cada request al Gateway valida la firma con la clave pública (JWKS en `/.well-known/jwks.json`), verifica `exp` y `iss`, e inyecta `X-User-Id` + `X-Correlation-ID` hacia los BFFs.
+- **Refresh:** `POST /auth/refresh` con `refresh_token` (opaco, en Redis, TTL 7 días) → nuevo access token.
+- **Rotación de claves:** la clave privada vive en `JWT_PRIVATE_KEY_FILE` (env). Rotación manual en Fase 0; en Fase 2, Vault + OIDC.
+- **Logout:** revocación del refresh token en Redis (access token expira solo).
+
+## 7. Protocolo SSE (notificaciones en vivo)
+
+Endpoint: `GET /insights/stream` (Pater web-bff) → `text/event-stream`.
+
+- **Eventos:** `trip.disrupted`, `booking.cancelled`, `booking.confirmed` (reenviados desde Spiritus/Pater).
+- **Formato:** `event: <tipo>\ndata: <json>\nid: <correlation-id>\n\n`.
+- **Reconexión:** el cliente envía `Last-Event-ID`; el servidor reenvía desde ese punto (buffer en Redis, TTL 5 min).
+- **Fallback:** si SSE no está disponible (proxy antiguo), polling cada 30 s a `/insights`.
+- **Heartbeat:** comentario `: keep-alive` cada 15 s para mantener la conexión.
+
+## 8. Convención de errores (envelope)
+
+Toda respuesta de error usa el schema `Error` de OpenAPI:
+
+```json
+{ "code": "BOOKING_NOT_FOUND", "message": "…", "correlation_id": "…", "details": { } }
+```
+
+- **Códigos:** `UPPER_SNAKE_CASE`, estables (parte del contrato). Lista inicial: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT`, `IDEMPOTENCY_REPLAY`, `UPSTREAM_TIMEOUT`, `UPSTREAM_UNAVAILABLE`.
+- **HTTP status:** 400 (validación), 401 (auth), 403 (permisos), 404 (no encontrado), 409 (conflicto/idempotencia), 502 (upstream), 503 (no disponible), 504 (timeout).
+- El `correlation_id` se propaga en el header `X-Correlation-ID` y en el body del error.
+
+## 9. Geolocalización (GPS) — QA-13
+
+Implementado en el **Mobile BFF** (`mobile-bff/`):
+
+- El cliente móvil envía `X-Device-Location: lat,lon` (permiso explícito, solo en foreground).
+- Endpoint `GET /trips/nearby?lat=..&lon=..&radius=..` devuelve reservas/viajes cercanos al viajero (usa `filius` + filtro por distancia).
+- **Privacidad:** la posición no se persiste; solo se usa en la respuesta. No se envía a terceros.
+- **Deep-linking (FR-6):** el Mobile BFF genera URLs de deep-link hacia apps de terceros (aerolíneas, hoteles) con el `provider_ref`.
+
 > Vistas complementarias: `../architecture/vista_cyc.md` (escenarios 2 y 3 en runtime) y
 > `../architecture/vista_despliegue.md` (contenedor `pater` tras Nginx). Detalle de eventos en
 > [05-catalogo-eventos.md](./05-catalogo-eventos.md).

@@ -70,7 +70,7 @@ sequenceDiagram
     IT->>IN: llamada en proceso (itinerary→integration)
     IN->>IN: fetch detalle al proveedor (resiliente)
     IN->>N: publish booking.confirmed (con detalle)
-    N->>EI: (Spiritus) re-ingesta si hace falta
+    N->>EI: (Spiritus) re-publica booking.discovered si hace falta
     Note over IT,EI: Sin tx distribuida (Newman ch.6).<br/>Itinerary e Integration son módulos de una misma unidad (Filius): la orquestación entre ellos es una llamada en proceso.
 ```
 

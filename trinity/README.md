@@ -94,6 +94,12 @@ reutilizan casi intactas:
 | **Vista de componentes y conectores** (runtime, cyc) | [architecture/vista_cyc.md](./architecture/vista_cyc.md) | `../architecture/vista_cyc.md` |
 | **Vista de despliegue** (asignación a infra) | [architecture/vista_despliegue.md](./architecture/vista_despliegue.md) | `../architecture/vista_despliegue.md` |
 | **Detalle por unidad** (código + dominio + contratos) | [units/](./units/README.md) | `../microservices/01..09` |
+| **Modelo de datos** (ERD, DDL, state machine Booking) | [data/modelo-datos.md](./data/modelo-datos.md) | (nuevo) |
+| **Contratos (OpenAPI 3.1)** | [../docs/api/openapi.yaml](../docs/api/openapi.yaml) | `../docs/api/openapi.yaml` |
+| **Contratos (eventos NATS, JSON Schema)** | [../docs/events/events.yaml](../docs/events/events.yaml) | `../docs/events/events.yaml` |
+| **Desarrollo local** | [dev/setup-local.md](./dev/setup-local.md) | (nuevo) |
+| **Estrategia de testing** | [testing/estrategia-testing.md](./testing/estrategia-testing.md) | (nuevo) |
+| **Operaciones** (observabilidad, backup, privacidad) | [ops/operaciones.md](./ops/operaciones.md) | (nuevo) |
 | **Registro de evolución** (changelog, deuda, transiciones) | [registers/](./registers/README.md) | — (nuevo, conforme a SPEC §5/Paso 8) |
 | ADR-101 Trinidad: 3 unidades en vez de N microservicios | [adrs/adr-101-trinidad.md](./adrs/adr-101-trinidad.md) | (adapta ADR-001) |
 | ADR-102 Límites de unidad y modularidad interna | [adrs/adr-102-límites-de-unidad.md](./adrs/adr-102-límites-de-unidad.md) | (adapta ADR-001/002/013) |

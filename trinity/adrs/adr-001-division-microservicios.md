@@ -1,5 +1,8 @@
 ## ADR-001: División en microservicios + Web + Gateway
 
+> ⚠️ **Procedencia:** este ADR describe la propuesta original de microservicios (`main`). La decisión vigente para la Trinidad es ADR-101..105. Se conserva como procedencia y adaptación; no es la decisión activa.
+
+
 **Status**: Superado por ADR-101 (Trinidad) — ver ADR-101
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura

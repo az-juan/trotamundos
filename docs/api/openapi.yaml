@@ -1,0 +1,413 @@
+openapi: 3.1.0
+info:
+  title: Trotamundos API (Pater - Gateway + BFFs)
+  version: 0.1.0
+  description: >
+    Contrato de la unidad Pater (Gateway + Web BFF + Mobile BFF). Es la unica superficie
+    expuesta al borde (atras de Nginx/TLS). Pater valida JWT RS256, aplica rate limit y
+    delega en Filius (REST interno) y en el read-model de Spiritus. Fuente de verdad del
+    estilo SDD: los tipos Go se generan con oapi-codegen.
+  contact: { name: Trotamundos Architecture, url: "https://github.com/az-juan/trotamundos" }
+
+servers:
+  - url: https://api.trotamundos.app
+    description: Produccion (Fase 0)
+  - url: http://localhost:8080
+    description: Desarrollo local
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: auth
+  - name: trips
+  - name: bookings
+  - name: sharing
+  - name: insights
+  - name: health
+
+paths:
+  /healthz:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Autenticacion (Fase 0 - emitida por el Gateway de Pater)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: JWT RS256 emitido
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /.well-known/jwks.json:
+    get:
+      tags: [auth]
+      summary: JWKS publico para validacion del JWT RS256
+      security: []
+      responses:
+        "200":
+          description: JWKS
+          content:
+            application/json:
+              schema: { type: object }
+
+  /trips:
+    get:
+      tags: [trips]
+      summary: Listar viajes del usuario autenticado
+      parameters:
+        - { in: query, name: status, schema: { type: string, enum: [upcoming, active, archived] } }
+        - { in: query, name: page, schema: { type: integer, default: 1 } }
+        - { in: query, name: page_size, schema: { type: integer, default: 20, maximum: 100 } }
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TripList" }
+    post:
+      tags: [trips]
+      summary: Crear un viaje (agrupacion de reservas)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateTripRequest" }
+      responses:
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Trip" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /trips/{tripId}:
+    parameters:
+      - { in: path, name: tripId, required: true, schema: { type: string } }
+    get:
+      tags: [trips]
+      summary: Detalle de un viaje con sus reservas
+      responses:
+        "200":
+          description: Viaje + reservas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TripDetail" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [trips]
+      summary: Actualizar metadatos del viaje
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateTripRequest" }
+      responses:
+        "200":
+          description: Actualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Trip" }
+
+  /trips/{tripId}/share:
+    parameters:
+      - { in: path, name: tripId, required: true, schema: { type: string } }
+    post:
+      tags: [sharing]
+      summary: Generar enlace compartible con permisos de visualizacion (QA-10, FR-8)
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShareRequest" }
+      responses:
+        "201":
+          description: Token de comparticion
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShareToken" }
+    get:
+      tags: [sharing]
+      summary: Ver itinerario compartido (publico con token)
+      security: []
+      parameters:
+        - { in: query, name: token, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Itinerario de solo lectura
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TripDetail" }
+
+  /bookings:
+    get:
+      tags: [bookings]
+      summary: Listar reservas (hospedaje y transporte)
+      parameters:
+        - { in: query, name: trip_id, schema: { type: string } }
+        - { in: query, name: type, schema: { type: string, enum: [lodging, transport, car_rental] } }
+      responses:
+        "200":
+          description: Lista
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BookingList" }
+    post:
+      tags: [bookings]
+      summary: Crear reserva manual (FR-4)
+      parameters:
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateBookingRequest" }
+      responses:
+        "201":
+          description: Creada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /bookings/{bookingId}:
+    parameters:
+      - { in: path, name: bookingId, required: true, schema: { type: string } }
+    get:
+      tags: [bookings]
+      summary: Detalle de una reserva
+      responses:
+        "200":
+          description: Reserva
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /trips/nearby:
+    get:
+      tags: [trips]
+      summary: Viajes/reservas cercanos al viajero (GPS, QA-13)
+      parameters:
+        - { in: query, name: lat, required: true, schema: { type: number } }
+        - { in: query, name: lon, required: true, schema: { type: number } }
+        - { in: query, name: radius_km, schema: { type: number, default: 50 } }
+      responses:
+        "200":
+          description: Lista de viajes cercanos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TripList" }
+
+  /insights:
+    get:
+      tags: [insights]
+      summary: Read-model analitico servido por Spiritus (sin tocar OLTP, QA-15)
+      parameters:
+        - { in: query, name: range, schema: { type: string, enum: [7d, 30d, 90d], default: 30d } }
+      responses:
+        "200":
+          description: Insights agregados
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Insights" }
+
+  /insights/stream:
+    get:
+      tags: [insights]
+      summary: SSE de notificaciones en vivo (disrupciones, trip.disrupted)
+      responses:
+        "200":
+          description: text/event-stream
+          content:
+            text/event-stream:
+              schema: { type: string }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: "JWT (RS256)"
+
+  responses:
+    BadRequest:
+      description: Solicitud invalida
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: No autenticado / token invalido
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: Conflicto (idempotencia / estado)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Health:
+      type: object
+      properties:
+        status: { type: string, enum: [ok] }
+        unit: { type: string }
+        version: { type: string }
+
+    Error:
+      type: object
+      required: [code, message, correlation_id]
+      properties:
+        code: { type: string, example: BOOKING_NOT_FOUND }
+        message: { type: string }
+        correlation_id: { type: string }
+        details: { type: object, additionalProperties: true }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+
+    TokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, enum: [Bearer] }
+        expires_in: { type: integer }
+        refresh_token: { type: string }
+
+    Trip:
+      type: object
+      required: [id, name, status, created_at]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [upcoming, active, archived] }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+
+    TripList:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Trip" } }
+        total: { type: integer }
+        page: { type: integer }
+        page_size: { type: integer }
+
+    CreateTripRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+
+    UpdateTripRequest:
+      type: object
+      properties:
+        name: { type: string }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+
+    Booking:
+      type: object
+      required: [id, trip_id, type, status, provider, provider_ref, created_at]
+      properties:
+        id: { type: string }
+        trip_id: { type: string }
+        type: { type: string, enum: [lodging, transport, car_rental] }
+        status: { type: string, enum: [discovered, pending, confirmed, cancelled, disrupted, archived] }
+        provider: { type: string }
+        provider_ref: { type: string }
+        details: { type: object, additionalProperties: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    BookingList:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Booking" } }
+        total: { type: integer }
+
+    CreateBookingRequest:
+      type: object
+      required: [trip_id, type, provider, provider_ref]
+      properties:
+        trip_id: { type: string }
+        type: { type: string, enum: [lodging, transport, car_rental] }
+        provider: { type: string }
+        provider_ref: { type: string }
+        details: { type: object, additionalProperties: true }
+
+    TripDetail:
+      type: object
+      properties:
+        trip: { $ref: "#/components/schemas/Trip" }
+        bookings: { type: array, items: { $ref: "#/components/schemas/Booking" } }
+        travelers: { type: array, items: { $ref: "#/components/schemas/Traveler" } }
+        share_token: { type: string, nullable: true }
+
+    Traveler:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        document: { type: string }
+        email: { type: string, format: email }
+
+    ShareRequest:
+      type: object
+      properties:
+        permission: { type: string, enum: [view], default: view }
+        expires_at: { type: string, format: date-time }
+
+    ShareToken:
+      type: object
+      required: [token, url, expires_at]
+      properties:
+        token: { type: string }
+        url: { type: string, format: uri }
+        expires_at: { type: string, format: date-time }
+
+    Insights:
+      type: object
+      properties:
+        range: { type: string }
+        trips_total: { type: integer }
+        bookings_by_type: { type: object, additionalProperties: { type: integer } }
+        top_destinations:
+          type: array
+          items:
+            type: object
+            properties:
+              destination: { type: string }
+              count: { type: integer }
+        cancellation_rate: { type: number }
+        generated_at: { type: string, format: date-time }
