@@ -81,6 +81,35 @@ Changelog cronológico de los cambios de documentación de la arquitectura **Tri
 
 ---
 
+## 2026-10-28 — Resolución de temas no tratados y refinamiento para la primera iteración de implementación
+- **Tipo:** resolución de gaps + refinamiento (post-revisión completa de consistencia).
+- **Artefactos nuevos:**
+  - `docs/api/openapi.yaml` — OpenAPI 3.1 (auth, trips, bookings, sharing, insights, nearby/GPS, health, envelope de errores).
+  - `docs/events/events.yaml` — JSON Schema de los 6 eventos NATS + streams, retención, idempotencia, migración a Kafka.
+  - `trinity/data/modelo-datos.md` — ERD, DDL por esquema (pater/filius/spiritus), state machine del Booking, ClickHouse (Fase 1), migraciones.
+  - `trinity/dev/setup-local.md` — guía de desarrollo local Fase 0.
+  - `deploy/docker-compose.yml` — materializado con healthchecks.
+  - `.env.example` — variables por unidad.
+  - `trinity/testing/estrategia-testing.md` — pirámide, contratos, flaky, cobertura.
+  - `trinity/ops/operaciones.md` — observabilidad (métricas), backup/restore, privacidad, runbook.
+- **Refinamientos aplicados:**
+  - `constraints.md` y `design-purpose.md` expandidos (equipo, tiempo, presupuesto, YAGNI, disparadores, GPS en scope).
+  - `units/02` (Pater): flujo JWT RS256, protocolo SSE, error envelope, geolocalización (GPS, QA-13).
+  - `units/03` (Filius): contratos de proveedores (integration) con cadena de resiliencia.
+  - `units/01`: métricas Prometheus, variables de entorno, error envelope.
+  - `atributos.md` QA-13: GPS con permiso explícito, solo foreground.
+  - `vista_cyc.md`: claridad en re-publicación de `booking.discovered`.
+  - `vista_modulos.md`: leyenda de color clarificada.
+  - `ADR-001..014`: encabezado de procedencia (decisión vigente = ADR-101..105).
+  - `transiciones.md`: criterio de salida explícito para Iteración II.
+  - `deuda-arquitectonica.md` DT-04: referencia simplificada.
+  - `trinity/README.md`: tabla de documentación actualizada.
+- **Validación:** 0 enlaces rotos (40), 28/28 mermaid OK, 0 pipes doblados, sin `registres` suelto.
+- **Trazabilidad:** SPEC-001 Paso 8 (cierre de gobernanza), Regla 2 (coherencia), CON-3 (vistas + ADRs), CON-4 (prototipo).
+- **Commit:** *(este commit)*.
+
+---
+
 ## Futuro (borrador — anotar al concretar)
 
 - Extracción de **Notification** como módulo de Spiritus (Fase 1) → actualizar `units/04` y `05`.

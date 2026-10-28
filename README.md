@@ -20,6 +20,7 @@ Toda la documentación de la arquitectura vive en [`trinity/`](./trinity/):
 | **Inicio** | [`trinity/README.md`](./trinity/README.md) | Idea central, el triángulo, encaje en el proceso SDD |
 | **Vistas arquitectónicas** | [`trinity/architecture/`](./trinity/architecture/) | Módulos (código) · Componentes y conectores (runtime) · Despliegue |
 | **Detalle por unidad** | [`trinity/units/`](./trinity/units/) | Pater · Filius · Spiritus + catálogo de eventos |
+| **Contratos y datos** | [`trinity/README.md`](./trinity/README.md) | OpenAPI 3.1 · eventos JSON Schema · modelo de datos · dev · testing · ops |
 | **Decisiones (ADR)** | [`trinity/adrs/`](./trinity/adrs/) | ADR-101..105 (Trinidad) + ADR-001..014 (heredados/adaptados) |
 | **Drivers** | [`trinity/drivers/`](./trinity/drivers/) | Requerimientos, atributos de calidad, constraints, concerns |
 | **Registro de evolución** | [`trinity/registers/`](./trinity/registers/) | Changelog, deuda arquitectónica, criterios de transición |
