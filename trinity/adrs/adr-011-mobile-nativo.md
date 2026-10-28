@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-102):** las apps nativas (Swift/Kotlin) se conservan; consumen el **módulo `mobile-bff` de Pater** (JSON). Sin cambio de lenguaje/UI.
+
 ### Contexto
 
 La app móvil debe: aprovechar GPS nativo (proximidad a aeropuerto/estación), push notifications, y cumplir FCP < 1.4 s. Se evaluaron: React Native, Flutter, y nativo.

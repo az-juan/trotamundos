@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-102):** Go se conserva sin cambios. El `go.work` reúne ahora **3 módulos de unidad** (`units/pater`, `units/filius`, `units/spiritus`) + `shared/`, en vez de 7 módulos de servicio.
+
 ### Contexto
 
 Se evaluaron Go, Rust, Kotlin/Spring, Elixir, TypeScript, Java/Quarkus para el backend. Criterios: rendimiento (SLA 800 ms), concurrency (escáner de correo, llamadas a APIs), simplicidad operativa (startup, equipo pequeño), ecosistema de microservicios.

@@ -1,8 +1,10 @@
 ## ADR-001: División en microservicios + Web + Gateway
 
-**Status**: Aceptado
+**Status**: Superado por ADR-101 (Trinidad) — ver ADR-101
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
+
+> **Adaptación a Trinidad (ADR-101):** la división en **7 microservicios** se reemplaza por **3 unidades modulares** (Pater/Filius/Spiritus). Los bounded contexts y la *regla de extracción 2-de-3* de este ADR se **heredan intactos**: los servicios originales sobreviven como **módulos internos** dentro de su unidad, con vía de extracción futura.
 
 ### Contexto
 

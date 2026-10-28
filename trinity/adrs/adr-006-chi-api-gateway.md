@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-102):** Chi se conserva como framework del **módulo `gateway` dentro de la unidad Pater** (ya no es un deployable independiente).
+
 ### Contexto
 
 Se necesita un punto de entrada único para Web y Mobile que maneje routing, autenticación (JWT), rate limiting y reverse proxy hacia los servicios internos. Se evaluaron: Chi (DIY), Traefik, Caddy, Tyk, Envoy Gateway, Ambassador, Kong.

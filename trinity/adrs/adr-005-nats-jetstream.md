@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-103):** NATS JetStream se **restringe a la única arista Filius↔Spiritus**. Pater, el Gateway y los BFF **no** publican ni consumen eventos (leen por REST o read-model). El catálogo de subjects y consumidores se reduce.
+
 ### Contexto
 
 Los servicios se comunican de forma asíncrona para: propagar cambios de reserva, notificar disrupciones, alimentar analítica, y desacoplar el escáner de correo del panel. Se evaluaron Kafka y NATS JetStream.

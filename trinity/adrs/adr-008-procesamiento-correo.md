@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-102):** el procesamiento de correo se conserva como **módulo `email-ingest` dentro de la unidad Spiritus** (perfil batch/async). Publica `booking.discovered` en la arista con Filius.
+
 ### Contexto
 
 El sistema debe escanear el correo de los usuarios para detectar reservas automáticamente. Los usuarios usan Gmail, Outlook, IMAP genérico. El formato de los correos de confirmación es no estructurado y varía por proveedor.

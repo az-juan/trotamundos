@@ -2,7 +2,7 @@
 
 > **Rama:** `main-trinity` · **Estatus:** arquitectura **elegida** para Trotamundos.
 > Procesa la misma especificación rectora (`../skills/SPEC_ARCHITECTURE.md`, ADD 3.0 + SDD) y los mismos
-> drivers (`../drivers/`) que la propuesta de microservicios de `main`, pero elige un **estilo macro
+> drivers (`./drivers/`) que la propuesta de microservicios de `main`, pero elige un **estilo macro
 > distinto**: en lugar de *microservicios hexagonales* (7 deployables), la **Santa Trinidad** organiza
 > el sistema en **tres unidades modulares** que comparten una sola sustancia (base de código, dominio y
 > despliegue) y se diferencian en tres personas (responsabilidades y perfiles de carga distintos). Las
@@ -59,7 +59,7 @@ graph TB
 ## 3. Por qué este estilo (resumen de decisión)
 
 La arquitectura de microservicios (rama `main`) es correcta pero **adelanta complejidad** frente a las
-restricciones reales del proyecto (**`../drivers/constraints.md`**: equipo pequeño, poco tiempo,
+restricciones reales del proyecto (**`./drivers/constraints.md`**: equipo pequeño, poco tiempo,
 presupuesto limitado). La Trinidad aplica *Just Enough Architecture* y *YAGNI* (Bass ch.20, Regla 3 de
 la Spec):
 

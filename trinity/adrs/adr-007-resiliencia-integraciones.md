@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-103):** la cadena de resiliencia (breaker→retry→rate-limit) se conserva; vive en el **módulo `integration` de Filius** y en `shared/resilient`. Se aplica también en la arista Pater↔Filius (timeouts).
+
 ### Contexto
 
 El servicio de Integration consume APIs de aerolíneas, hoteles y rentadoras. Estas APIs tienen: rate limits distintos, tiempos de respuesta variables, caídas intermitentes, y formatos de error no estandarizados. Un fallo en un proveedor no puede tumbar el panel.

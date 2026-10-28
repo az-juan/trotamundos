@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-105):** se conserva **Docker Compose + GitHub Actions + DigitalOcean**, pero con **3 imágenes/contenedores** (`pater`/`filius`/`spiritus`) en vez de 7. Deploy atómico por unidad con `--no-deps`.
+
 ### Contexto
 
 La startup está en Fase 0 (MVP, equipo de 3–5 devs). No hay necesidad de K8s, multi-región, ni auto-scaling programático. El objetivo es minimizar costo (monetario y de tiempo) mientras se valida el producto.

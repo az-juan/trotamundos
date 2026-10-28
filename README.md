@@ -1,38 +1,33 @@
-# TPE - TROTAMUNDOS
+# Trotamundos — Arquitectura «Trinidad»
 
-A continuación presentamos el diseño/arquitectura de software que llevamos a cabo para la implementación del sistema propuesto *Trotamundos*
+Diseño de software del sistema **Trotamundos** (panel de gestión de viajes web y móvil). La
+arquitectura **elegida** es la **Santa Trinidad**: tres unidades modulares interconectadas en triángulo
+— **Pater** (el Rostro), **Filius** (el Núcleo) y **Spiritus** (la Mente) — que comparten una sola
+sustancia (base de código, dominio y despliegue) y se diferencian en tres personas (responsabilidades
+y perfiles de carga distintos).
 
-## Drivers
-+ [Requerimientos funcionales](./drivers/requerimientos.md)
-+ [Atributos de calidad](./drivers/atributos.md)
-+ [Constraints](./drivers/constraints.md)
-+ [Concerns](./drivers/concerns.md)
+> Deriva de la misma especificación rectora (**ADD 3.0 + SDD**) y los mismos drivers que la propuesta
+> inicial de microservicios, pero elige un monolito **modular partido en 3 unidades** en lugar de 7
+> microservicios, conservando y re-particionando todas las decisiones técnicas (Go, hexagonal,
+> PostgreSQL/Redis/ClickHouse, NATS, Chi, templ/htmx, JWT RS256, Docker Compose, DigitalOcean, GitHub Actions).
 
-## Arquitectura
-Consideramos el monolito por una cuestión de performance, pero teniendo en cuenta los drivers (como la escalabilidad que exige el sistema), preferimos por adoptar un enfoque arquitectónico de microservicios hexagonales + API gateway + broker. \
-El diseño hexagonal se debe a lograr una independencia entre la lógica de cada microservicio y las conexiones que tiene a las demás tecnologías, de esta manera logramos que el sistema sea altamente modificable, permitiendo migrar a otras tecnologías cuando el sistema lo requiera (por ejemplo de NATS a Kafka).
+## Documentación
 
-+ [Diagrama de contexto](./architecture/diagrama_de_contexto.jpg)
-+ [Lista de tecnologías a usar](./architecture/tecnologias.md)
-+ [Vista de módulos](./architecture/vista_modulos.md)
-+ [Vista de componentes y conectores](./architecture/vista_cyc.md)
-+ [Vista de asignaciones/despliegue](./architecture/vista_despliegue.md)
+Toda la documentación de la arquitectura vive en [`trinity/`](./trinity/):
 
-A continuación una descripción mas detallada de la arquitectura, haciendo foco en cada componente del sistema:
-+ [Descomposición en microservicios](./microservices/README.md)
+| Sección | Ubicación | Contenido |
+|---------|-----------|-----------|
+| **Inicio** | [`trinity/README.md`](./trinity/README.md) | Idea central, el triángulo, encaje en el proceso SDD |
+| **Vistas arquitectónicas** | [`trinity/architecture/`](./trinity/architecture/) | Módulos (código) · Componentes y conectores (runtime) · Despliegue |
+| **Detalle por unidad** | [`trinity/units/`](./trinity/units/) | Pater · Filius · Spiritus + catálogo de eventos |
+| **Decisiones (ADR)** | [`trinity/adrs/`](./trinity/adrs/) | ADR-101..105 (Trinidad) + ADR-001..014 (heredados/adaptados) |
+| **Drivers** | [`trinity/drivers/`](./trinity/drivers/) | Requerimientos, atributos de calidad, constraints, concerns |
+| **Registro de evolución** | [`trinity/registres/`](./trinity/registres/) | Changelog, deuda arquitectónica, criterios de transición |
+| **Especificación rectora** | [`skills/SPEC_ARCHITECTURE.md`](./skills/SPEC_ARCHITECTURE.md) | Marco ADD 3.0 + SDD |
 
-## ADRs
-+ [ADR 001: División en microservicios + Web + Gateway](./adrs/adr-001)
-+ [ADR 002: Arquitectura hexagonal por microservicio](./adrs/adr-002)
-+ [ADR 003: Go como lenguaje principal](./adrs/adr-003)
-+ [ADR 004: PostgreSQL + Redis + ClickHouse](./adrs/adr-004)
-+ [ADR 005: NATS Jetstream como broker de eventos](./adrs/adr-005)
-+ [ADR 006: Chi como API Gateway (DIY)](./adrs/adr-006)
-+ [ADR 007: Resiliencia en integraciones externas](./adrs/adr-007)
-+ [ADR 008: Procesamiento de correo - IMAP + Gmail API + Parser por reglas](./adrs/adr-008)
-+ [ADR 009: Web Server-Rendered con templ + htmx + tailwind](./adrs/adr-009)
-+ [ADR 010: Analítica - ClickHouse con Batch Ingest](./adrs/adr-010)
-+ [ADR 011: Mobile nativo (Swift + Kotlin)](./adrs/adr-011)
-+ [ADR 012: Deploy - Docker Compose + GitHub Actions en DigitalOcean](./adrs/adr-012)
-+ [ADR 013: BFF por experiencia (Web + Mobile) tras el Gateway](./adrs/adr-013)
-+ [ADR 014: Autenticación — JWT RS256 (Gateway → Identity/OIDC)](./adrs/adr-014)
+## Por qué Trinidad
+
+Conserva el escalado y aislamiento por perfil de carga de los microservicios (batch CPU vs. per-request)
+con **solo 3 deployables** en vez de 7: sin service mesh, sin Kubernetes en Fase 0, un solo Droplet con
+Docker Compose. Se respeta la sobriedad operativa exigida por las restricciones del proyecto (equipo
+pequeño, poco tiempo, presupuesto limitado) y se preserva la vía de extracción de módulo a servicio.

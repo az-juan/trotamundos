@@ -1,6 +1,6 @@
 # Trotamundos — Tecnologías (Trinidad)
 
-> Mismo stack que la arquitectura de microservicios (`../architecture/tecnologias.md`). **No hay
+> Mismo stack que la arquitectura de microservicios (rama `main`: `architecture/tecnologias.md`). **No hay
 > cambios de lenguaje, framework ni almacén**; la Trinidad solo **re-particiona** esas tecnologías en
 > 3 unidades. La columna «Unidad / Cambio» indica dónde vive cada tecnología y qué cambia respecto de `main`.
 

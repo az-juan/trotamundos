@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-102):** la arquitectura hexagonal se conserva **inalterada**, pero se aplica a nivel de **módulo interno dentro de cada unidad** (no de servicio desplegable). El dominio sigue sin importar infraestructura; la Trinidad solo cambia cómo se agrupan los módulos, no su estructura interna.
+
 ### Contexto
 
 Trotamundos es una plataforma de gestión de viajes que integra múltiples fuentes (correos, APIs de aerolíneas, hoteles, rentadoras) y debe evolucionar con la incorporación de nuevos medios de transporte (trenes, autobuses). El dominio central (viaje, reserva, ciclo de vida) es estable, pero los adaptadores externos cambian con frecuencia.

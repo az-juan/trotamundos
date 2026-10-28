@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-102):** templ + htmx + Tailwind se conservan como **módulo `web-bff` dentro de la unidad Pater** (render del servidor, baja latencia).
+
 ### Contexto
 
 La web debe cumplir: FCP < 1.4 s, SLA de 800 ms, i18n multi-región, y una interfaz rica (timeline de viaje, badges de estado, notificaciones en vivo). Se evaluaron: SPA (React/Vue/Svelte), SSR (Next.js/Nuxt), y server-rendered con fragments.

@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-104):** PostgreSQL se **comparte con segregación por esquema** (`pater`/`filius`/`spiritus`); cada unidad escribe solo en su esquema. **ClickHouse sigue exclusivo de Spiritus** (OLAP). Redis es caché compartido.
+
 ### Contexto
 
 El sistema tiene tres perfiles de datos claramente distintos:

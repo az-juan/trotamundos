@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-27
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-104):** en Fase 0 el **Gateway de Pater** emite y valida JWT RS256 (JWKS propio); en Fase 2 se extrae **Identity** como IdP OIDC. Sin cambio de mecanismo de auth.
+
 ### Contexto
 
 El Gateway necesita emitir y validar tokens para autorizar a Web, Mobile y terceros (ADR-006). Pero

@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-27
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-102):** el principio *one BFF per experience* se conserva, ahora como **módulos dentro de Pater** (`web-bff` + `mobile-bff`) en vez de deployables independientes; el tráfico sigue entrando por el Gateway de Pater.
+
 ### Contexto
 
 El sistema atiende dos experiencias de cliente con necesidades de agregación distintas: la **web**

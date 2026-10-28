@@ -4,6 +4,8 @@
 **Fecha**: 2026-10-26
 **Decidido por**: Equipo de arquitectura
 
+> **Adaptación a Trinidad (ADR-102):** la analítica ClickHouse se conserva como **módulo `analytics` dentro de la unidad Spiritus**; sirve el read-model de insights a Pater (CQRS, QA-15).
+
 ### Contexto
 
 El equipo de datos necesita ejecutar consultas analíticas pesadas (tendencias de destino, cancelaciones por aerolínea, cohortes de usuarios) sin impactar el SLA de 800 ms del panel. Se requiere retención de 2 años y consultas de 5–30 s.

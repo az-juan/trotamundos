@@ -56,6 +56,23 @@ Changelog cronológico de los cambios de documentación de la arquitectura **Tri
 
 ---
 
+## 2026-10-28 — Consolidación: Trinity como documentación única del repositorio
+
+- **Tipo:** reorganización estructural + migración de drivers/ADRs + eliminación de docs de microservicios.
+- **Artefactos:**
+  - `drivers/` → **movido a `trinity/drivers/`** (requerimientos, atributos, constraints, concerns).
+  - `adrs/adr-001..014` → **movidos a `trinity/adrs/`** con nombre descriptivo y **adaptados a Trinidad**:
+    - **ADR-001** (7 microservicios) → estatus **Superado por ADR-101**; los bounded contexts y la regla 2-de-3 se heredan como módulos/unidades.
+    - **ADR-002/003/004/005/006/007/008/009/010/011/012/013/014** → **Aceptados** + nota «Adaptación a Trinidad» (hexagonal por módulo, Go/go.work, PG con esquemas, NATS a una arista, Chi/BFFs en Pater, email/analytics en Spiritus, 3 imágenes, JWT del Gateway de Pater).
+  - **Eliminados:** `microservices/` (01..09) y `architecture/` raíz (vistas de microservicios) — superados por `trinity/units/` y `trinity/architecture/`.
+  - `README.md` raíz → reescrito como **página de entrada** a la documentación de Trinidad.
+- **Motivo:** presentar a Trinidad como la única documentación de arquitectura del repositorio; mantener los ADRs y drivers adecuados y reconciliados con la Trinidad.
+- **Trazabilidad:** SPEC-001 Regla 2 (coherencia; ADR-001 superado formalmente por ADR-101, no borrado sin registro), CON-3.
+- **Nota:** los enlaces funcionales de `trinity/` son todos internos (`./…`); las referencias `../architecture/X` y `../microservices/X` que quedan son texto descriptivo de la rama `main` (columna «Equivalente en `main`»), no enlaces rotos.
+- **Commit:** *(pendiente de commit en esta sesión)*.
+
+---
+
 ## Futuro (borrador — anotar al concretar)
 
 - Extracción de **Notification** como módulo de Spiritus (Fase 1) → actualizar `units/04` y `05`.
