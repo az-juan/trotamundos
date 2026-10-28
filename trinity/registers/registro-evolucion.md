@@ -69,7 +69,15 @@ Changelog cronológico de los cambios de documentación de la arquitectura **Tri
 - **Motivo:** presentar a Trinidad como la única documentación de arquitectura del repositorio; mantener los ADRs y drivers adecuados y reconciliados con la Trinidad.
 - **Trazabilidad:** SPEC-001 Regla 2 (coherencia; ADR-001 superado formalmente por ADR-101, no borrado sin registro), CON-3.
 - **Nota:** los enlaces funcionales de `trinity/` son todos internos (`./…`); las referencias `../architecture/X` y `../microservices/X` que quedan son texto descriptivo de la rama `main` (columna «Equivalente en `main`»), no enlaces rotos.
-- **Commit:** *(pendiente de commit en esta sesión)*.
+- **Commit:** `3b95642` (main-trinity; fast-forward a `main` en `d919297`).
+
+---
+
+## 2026-10-28 — Renombrado del registro y consolidación en main
+- `registres/` → `registers/` (terminología inglesa; el propio registro se renombra). Referencias actualizadas en `README` raíz, `trinity/README` y `units/01`.
+- `main` actualizado a Trinidad por **fast-forward** desde `main-trinity` (sin conflictos; `main` = documentación única de Trinidad).
+- Verificación: 0 enlaces rotos internos, 0 referencias colgantes a carpetas borradas, 26 bloques mermaid válidos, sin "registres" suelto.
+- **Estado: listo para empezar la implementación.**
 
 ---
 
