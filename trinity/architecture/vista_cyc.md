@@ -38,7 +38,8 @@ graph LR
 
 Vista de **Componentes y Conectores (C&C)**: estructura de **runtime**. Muestra **cómo interactúan los
 componentes dinámicamente** para ejecutar los escenarios del sistema. La disposición es **triangular**:
-las tres unidades conectadas dos a dos, y **cada arista usa un conector distinto**:
+las tres unidades conectadas dos a dos, y **cada arista usa un conector distinto** (es la perspectiva en
+runtime del *triángulo trinitario* de `vista_modulos.md`):
 
 - **Pater ↔ Filius — REST (síncrono, request-response).** Cliente → Gateway → BFF → módulos de Filius.
   Dentro de Filius, Itinerary↔Integration se llaman **en proceso** (sin red).

@@ -31,6 +31,44 @@ graph TB
     class HEX hex;
 ```
 
+## El triángulo trinitario — las tres unidades interconectadas
+
+> *Una sola sustancia, tres personas.* Las tres unidades forman un **triángulo**: cada par está
+> conectado por **exactamente una** arista, elegida por la naturaleza de la interacción. Dentro de cada
+> unidad la comunicación es **en proceso** (sin red); **solo las tres aristas cruzan límites de
+> proceso**. Este es el diagrama de referencia que comparten las tres vistas (módulos, cyc, despliegue),
+> cada una desde su propia perspectiva (dependencia estática / conector en runtime / contenedor).
+
+```mermaid
+graph TD
+    P["🕊️ PATER — Facade<br/>Gateway · Web BFF · Mobile BFF<br/>(per-request · latencia)"]
+    F["✝️ FILIUS — Núcleo<br/>Itinerary · Integration<br/>(per-request · OLTP)"]
+    S["🔥 SPIRITUS — Mente<br/>Email Ingest · Analytics<br/>(batch · OLAP)"]
+
+    P <-->|"REST · OpenAPI<br/>(síncrono · JWT RS256)"| F
+    F <-->|"NATS JetStream<br/>(eventos ricos · async)"| S
+    S <-->|"read-model · SSE<br/>(insights · notificaciones)"| P
+
+    classDef p fill:#2d2d44,stroke:#7c6ff7,color:#fff;
+    classDef f fill:#1a3a2a,stroke:#4caf50,color:#fff;
+    classDef s fill:#2a1a3a,stroke:#ba68c8,color:#fff;
+    class P p;
+    class F f;
+    class S s;
+```
+
+| Arista | Conector (contrato) | Qué cruza la arista | Por qué este conector |
+|--------|---------------------|---------------------|----------------------|
+| **Pater ↔ Filius** | REST · OpenAPI (síncrono) | Cliente necesita el resultado ya (itinerarios, reservas) | Baja latencia (QA-6 / QA-7) |
+| **Filius ↔ Spiritus** | NATS JetStream (async) | Hechos de negocio (`booking.*`, `trip.*`) | Desacople de picos; cada consumidor reacciona (QA-3 / QA-5) |
+| **Spiritus → Pater** | read-model · SSE | Insights y notificaciones (proyecciones analíticas) | CQRS: analítica sin tocar el OLTP (QA-15) |
+
+> **Information hiding (Parnas / Newman ch.2):** lo que cruza una arista es **contrato** (evento
+> versionado o endpoint OpenAPI), **nunca** el código interno de la otra unidad. Así el triángulo
+> preserva la información oculta *sin* multiplicar bases de datos ni procesos. La dependencia de
+> compilación entre unidades se limita a `shared/event` (los tipos del contrato); ver ADR-103 (aristas)
+> y ADR-104 (segregación por esquema).
+
 ## Propósito de esta vista (module structure, Bass ch.1/22)
 
 Vista de **módulos** (estructura estática, tiempo de diseño): muestra **cómo se organiza el código**
@@ -115,6 +153,9 @@ Pater, y para Email Ingest/Analytics dentro de Spiritus.
 
 - **morado** = unidades (módulos desplegable) · **azul** = `shared/` y módulos raíz (`go.work`, carpetas)
   · **verde** = dominio (estable) · **naranja** = puertos (interfaces, el contrato).
+- **Esquema de color del triángulo** (arriba, y común a las tres vistas): **morado = Pater**,
+  **verde = Filius**, **magenta = Spiritus**. (En el hexágono el verde significa *dominio*; el contexto
+  del diagrama lo distingue: en el triángulo el verde etiqueta a la unidad **Filius**.)
 - **Flechas sólidas** = dependencia de compilación (hacia el módulo del que se depende). En el hexágono,
   todas apuntan a `domain`/`ports` = el centro estable.
 - **Flechas punteadas** = dependencia de contrato (`shared/event`), no de implementación.

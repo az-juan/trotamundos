@@ -78,7 +78,8 @@
 
 Vista de **asignación** (estructura de despliegue): cómo se mapea el código a la infraestructura. La
 disposición es **triangular**: **3 contenedores** (`pater`, `filius`, `spiritus`) en un solo Droplet,
-conectados dos a dos por una red Docker interna. Se respeta **Docker Compose + GitHub Actions +
+conectados dos a dos por una red Docker interna (es la perspectiva de *allocation* del *triángulo
+trinitario* de `vista_modulos.md`). Se respeta **Docker Compose + GitHub Actions +
 DigitalOcean** (ADR-012), simplificando de **7 a 3** imágenes.
 
 ## 1. Infraestructura Fase 0 (costo total ~$80/mes, igual que `main`)
