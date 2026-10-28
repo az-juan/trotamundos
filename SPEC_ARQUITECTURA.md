@@ -1,7 +1,7 @@
 # SPEC-001: Especificación y Marco de Ejecución para el Diseño Arquitectónico (ADD 3.0 + SDD)
 
 **Proyecto:** Trotamundos  
-**Versión del Documento:** 2.0 (Refinada y Desduplicada)  
+**Versión del Documento:** 2.0 (Refinadas)  
 **Audiencia:** Equipo de Desarrollo de Software y Agentes de IA Generativa  
 **Metodología Base:** Spec-Driven Development (SDD) & Attribute-Driven Design (ADD 3.0)  
 **Referencia Teórica Principal:** SKILL `bass-software-architecture` (*Software Architecture in Practice*, 4th Edition — Len Bass, Paul Clements, Rick Kazman)
@@ -113,7 +113,7 @@ flowchart TD
     end
 
     subgraph PostADD ["Etapa Posterior: Cierre de Iteración y Gobernanza"]
-        P8["Paso 8: Actualización de Backlog y Criterios de Transición\n(Actualizar Kanban y preparar siguiente iteración o prototipo)"]
+        P8["Paso 2: Actualización de Backlog y Criterios de Transición\n(Preparar siguiente iteración o prototipo)"]
     end
 
     P1 --> S1
@@ -146,24 +146,23 @@ El núcleo del diseño técnico se ejecuta mediante los 7 pasos canónicos de AD
 
 | Paso ADD 3.0 | Actividad Metodológica | Referencia en SKILL `bass-software-architecture` |
 |---|---|---|
-| **ADD 1: Revisar Insumos** | Verificar que los drivers seleccionados en el Paso 1 y las restricciones de `constraints.md` estén claros, vigentes y priorizados. | Consultar [ch19-architecturally-significant-requirements.md](file:///home/yo/SI/Ingenieria/.agents/skills/bass-software-architecture/chapters/ch19-architecturally-significant-requirements.md) para priorización de ASRs. |
-| **ADD 2: Establecer Objetivo** | Confirmar formalmente el objetivo derivado del Paso 1 que guiará el criterio de parada de la iteración. | [ch20-designing-an-architecture.md](file:///home/yo/SI/Ingenieria/.agents/skills/bass-software-architecture/chapters/ch20-designing-an-architecture.md) (*"An iteration without a driver subset has no stopping condition"*). |
+| **ADD 1: Revisar Insumos** | Verificar que los drivers seleccionados en el Paso 1 y las restricciones de `constraints.md` estén claros, vigentes y priorizados. | Consultar [ch19-architecturally-significant-requirements.md](file:./.agents/skills/bass-software-architecture/chapters/ch19-architecturally-significant-requirements.md) para priorización de ASRs. |
+| **ADD 2: Establecer Objetivo** | Confirmar formalmente el objetivo derivado del Paso 1 que guiará el criterio de parada de la iteración. | [ch20-designing-an-architecture.md](file:./.agents/skills/bass-software-architecture/chapters/ch20-designing-an-architecture.md) (*"An iteration without a driver subset has no stopping condition"*). |
 | **ADD 3: Seleccionar Elementos a Refinar** | Determinar los elementos arquitectónicos objeto de atención: descomposición (top-down), combinación (bottom-up) o mejora de elementos previos. | En Iteración I se refina el sistema global como un todo (caja negra a blanca). En II-IV se refinan subsistemas y conectores específicos. |
-| **ADD 4: Seleccionar Conceptos de Diseño** | Identificar y seleccionar patrones arquitectónicos, tácticas de calidad o tecnologías comerciales que satisfagan los drivers. | Consultar capítulos de tácticas ([ch04](file:///home/yo/SI/Ingenieria/.agents/skills/bass-software-architecture/chapters/ch04-availability.md) a [ch14](file:///home/yo/SI/Ingenieria/.agents/skills/bass-software-architecture/chapters/ch14-working-with-other-quality-attributes.md)). |
-| **ADD 5: Instanciar Elementos, Asignar Responsabilidades y Definir Interfaces** | Transformar conceptos abstractos en elementos concretos dentro de las 3 estructuras fundamentales: **Módulos**, **C&C** y **Asignación**, asegurando alta cohesión y bajo acoplamiento. | [ch01](file:///home/yo/SI/Ingenieria/.agents/skills/bass-software-architecture/chapters/ch01-what-is-software-architecture.md) (Tres categorías de estructuras) y [ch15](file:///home/yo/SI/Ingenieria/.agents/skills/bass-software-architecture/chapters/ch15-software-interfaces.md) (Diseño contractual de interfaces). |
-| **ADD 6: Bosquejar Vistas y Registrar Decisiones (MADR)** | **Documentación activa y unificada:**<br>1. *Vistas:* Actualizar diagramas conceptuales y tablas de responsabilidades de las estructuras refinadas ([Ch 22](file:///home/yo/SI/Ingenieria/.agents/skills/bass-software-architecture/chapters/ch22-documenting-an-architecture.md)).<br>2. *ADRs:* Registrar cada decisión clave en formato **MADR** evaluando obligatoriamente **≥ 3 alternativas razonables** (ver Sección 5). | [ch22-documenting-an-architecture.md](file:///home/yo/SI/Ingenieria/.agents/skills/bass-software-architecture/chapters/ch22-documenting-an-architecture.md) (Reglas de documentación sana) y plantilla MADR. |
-| **ADD 7: Analizar Diseño y Evaluar Cumplimiento del Objetivo** | Realizar el control de calidad intrínseco de la iteración: verificar si el diseño satisface los drivers seleccionados y detectar riesgos o trade-offs no mitigados. | [ch03](file:///home/yo/SI/Ingenieria/.agents/skills/bass-software-architecture/chapters/ch03-understanding-quality-attributes.md) (Cuestionarios de tácticas) y [ch21](file:///home/yo/SI/Ingenieria/.agents/skills/bass-software-architecture/chapters/ch21-evaluating-an-architecture.md) (Evaluación de riesgos y sensibilidades). |
+| **ADD 4: Seleccionar Conceptos de Diseño** | Identificar y seleccionar patrones arquitectónicos, tácticas de calidad o tecnologías comerciales que satisfagan los drivers. | Consultar capítulos de tácticas ([ch04](file:./.agents/skills/bass-software-architecture/chapters/ch04-availability.md) a [ch14](file:./.agents/skills/bass-software-architecture/chapters/ch14-working-with-other-quality-attributes.md)). |
+| **ADD 5: Instanciar Elementos, Asignar Responsabilidades y Definir Interfaces** | Transformar conceptos abstractos en elementos concretos dentro de las 3 estructuras fundamentales: **Módulos**, **C&C** y **Asignación**, asegurando alta cohesión y bajo acoplamiento. | [ch01](file:./.agents/skills/bass-software-architecture/chapters/ch01-what-is-software-architecture.md) (Tres categorías de estructuras) y [ch15](file:./.agents/skills/bass-software-architecture/chapters/ch15-software-interfaces.md) (Diseño contractual de interfaces). |
+| **ADD 6: Bosquejar Vistas y Registrar Decisiones (MADR)** | **Documentación activa y unificada:**<br>1. *Vistas:* Actualizar diagramas conceptuales y tablas de responsabilidades de las estructuras refinadas ([Ch 22](file:./.agents/skills/bass-software-architecture/chapters/ch22-documenting-an-architecture.md)).<br>2. *ADRs:* Registrar cada decisión clave en formato **MADR** evaluando obligatoriamente **≥ 3 alternativas razonables** (ver Sección 5). | [ch22-documenting-an-architecture.md](file:./.agents/skills/bass-software-architecture/chapters/ch22-documenting-an-architecture.md) (Reglas de documentación sana) y plantilla MADR. |
+| **ADD 7: Analizar Diseño y Evaluar Cumplimiento del Objetivo** | Realizar el control de calidad intrínseco de la iteración: verificar si el diseño satisface los drivers seleccionados y detectar riesgos o trade-offs no mitigados. | [ch03](file:./.agents/skills/bass-software-architecture/chapters/ch03-understanding-quality-attributes.md) (Cuestionarios de tácticas) y [ch21](file:./.agents/skills/bass-software-architecture/chapters/ch21-evaluating-an-architecture.md) (Evaluación de riesgos y sensibilidades). |
 
 ---
 
 ### Etapa Posterior: Cierre de Iteración y Gobernanza (Post-ADD)
 
-#### Paso 8: Actualización de Backlog y Criterios de Transición
+#### Paso 2: Actualización de Backlog y Criterios de Transición
 * **Propósito:** Consolidar el progreso y transferir el conocimiento formalmente al siguiente ciclo.
 * **Actividades:**
-  1. **Actualizar el Tablero Kanban Arquitectónico:** Mover los drivers analizados a la columna *Completely Addressed*.
-  2. **Registrar Deuda Técnica y Dudas Residuales:** Catalogar cualquier compromiso deliberado de deuda técnica ([Ch 23](file:///home/yo/SI/Ingenieria/.agents/skills/bass-software-architecture/chapters/ch23-managing-architecture-debt.md)) para su tratamiento posterior.
-  3. **Verificación de Transición:**
+  1. **Registrar Deuda Técnica y Dudas Residuales:** Catalogar cualquier compromiso deliberado de deuda técnica ([Ch 23](file:./.agents/skills/bass-software-architecture/chapters/ch23-managing-architecture-debt.md)) para su tratamiento posterior.
+  2. **Verificación de Transición:**
      - Si estamos al final de la Iteración I, II o III: confirmar que los cimientos requeridos para el siguiente hito de **CON-5** están listos.
      - Si estamos al final de la **Iteración IV**: verificar que las vistas, contratos e interfaces poseen el nivel de detalle necesario para dar inicio a la construcción del prototipo ejecutable (**CON-4**).
 
@@ -218,6 +217,7 @@ Se elige la **Opción [X]** porque [justificación técnica rigurosa basada en e
 * **Impacto Positivo:** [Beneficios inmediatos logrados]
 * **Trade-offs y Riesgos Aceptados:** [Cualidades comprometidas deliberadamente]
 * **Deuda Arquitectónica / Acciones Futuras:** [Puntos de atención para iteraciones subsiguientes]
+
 ```
 
 ---
@@ -256,15 +256,15 @@ Cuando un modelo de IA Generativa participe en el análisis, diseño o documenta
 ## 7. Recomendaciones Basadas en la Industria de Software
 
 1. **C4 Model (Nivel 1 Contexto) para CON-2:**  
-   En la Iteración I, plasmar el Diagrama de Contexto siguiendo el estándar C4 Nivel 1 (o caja y línea con límites claros), ubicando a Trotamundos como el sistema central en interacción con sus 6 actores externos ([func-rqmts.md](file:///home/yo/SI/Ingenieria/trotamundos/drivers/func-rqmts.md#L1-L7)).
+   En la Iteración I, plasmar el Diagrama de Contexto siguiendo el estándar C4 Nivel 1 (o caja y línea con límites claros), ubicando a Trotamundos como el sistema central en interacción con sus 6 actores externos ([func-rqmts.md](file:./drivers/func-rqmts.md#L1-L7)).
 2. **Diseño Orientado a Interfaces y Contratos (API-First):**  
-   Dado el ecosistema heterogéneo de proveedores ([FR-1](file:///home/yo/SI/Ingenieria/trotamundos/drivers/func-rqmts.md#L11), [QA-4](file:///home/yo/SI/Ingenieria/trotamundos/drivers/QA.md#L19)), definir contratos contractuales explícitos (OpenAPI/JSON Schema) antes de acoplar la lógica de integración (*Bass et al., Ch. 15*).
+   Dado el ecosistema heterogéneo de proveedores ([FR-1](file:./drivers/func-rqmts.md#L11), [QA-4](file:./drivers/QA.md#L19)), definir contratos contractuales explícitos (OpenAPI/JSON Schema) antes de acoplar la lógica de integración (*Bass et al., Ch. 15*).
 3. **Capa Anti-Corrupción (Anti-Corruption Layer - ACL):**  
-   Implementar adaptadores que aíslen el modelo de dominio interno de las variaciones y fallas de las APIs externas de transporte y hotelería ([QA-11](file:///home/yo/SI/Ingenieria/trotamundos/drivers/QA.md#L2), [QA-4](file:///home/yo/SI/Ingenieria/trotamundos/drivers/QA.md#L19)).
+   Implementar adaptadores que aíslen el modelo de dominio interno de las variaciones y fallas de las APIs externas de transporte y hotelería ([QA-11](file:./drivers/QA.md#L2), [QA-4](file:./drivers/QA.md#L19)).
 4. **Segregación de Cargas Operativas (CQRS / Task Separation):**  
-   Separar físicamente o lógicamente los flujos de lectura de ultra baja latencia para el viajero (< 800 ms web en [QA-6](file:///home/yo/SI/Ingenieria/trotamundos/drivers/QA.md#L10) y < 1.4 s en móvil [QA-7](file:///home/yo/SI/Ingenieria/trotamundos/drivers/QA.md#L11)) de las cargas batch o analíticas pesadas ([QA-15](file:///home/yo/SI/Ingenieria/trotamundos/drivers/QA.md#L16), [FR-7](file:///home/yo/SI/Ingenieria/trotamundos/drivers/func-rqmts.md#L16)).
+   Separar físicamente o lógicamente los flujos de lectura de ultra baja latencia para el viajero (< 800 ms web en [QA-6](file:./drivers/QA.md#L10) y < 1.4 s en móvil [QA-7](./drivers/QA.md#L11)) de las cargas batch o analíticas pesadas ([QA-15](file:./drivers/QA.md#L16), [FR-7](file:./drivers/func-rqmts.md#L16)).
 5. **Prototipo Desechable Enfocado (Throwaway Prototype - CON-4):**  
-   Tras la Iteración IV, el prototipo debe orientarse estrictamente a despejar la mayor incertidumbre técnica (como la ingesta y parseo automatizado de reservas vía correo electrónico bajo [FR-2](file:///home/yo/SI/Ingenieria/trotamundos/drivers/func-rqmts.md#L12) y [QA-9](file:///home/yo/SI/Ingenieria/trotamundos/drivers/QA.md#L22)), sin pretender ser el producto terminado (*Bass et al., Ch. 20*).
+   Tras la Iteración IV, el prototipo debe orientarse estrictamente a despejar la mayor incertidumbre técnica (como la ingesta y parseo automatizado de reservas vía correo electrónico bajo [FR-2](file:./drivers/func-rqmts.md#L12) y [QA-9](file:./drivers/QA.md#L22)), sin pretender ser el producto terminado (*Bass et al., Ch. 20*).
 
 ---
 
