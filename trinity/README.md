@@ -1,6 +1,6 @@
 # Trotamundos — Arquitectura «Trinidad» (tres unidades modulares)
 
-> **Rama:** `main-trinity` · **Estatus:** arquitectura **elegida** para Trotamundos.
+> **Rama:** `main` (consolidada desde `main-trinity`) · **Estatus:** arquitectura **elegida** para Trotamundos.
 > Procesa la misma especificación rectora (`../skills/SPEC_ARCHITECTURE.md`, ADD 3.0 + SDD) y los mismos
 > drivers (`./drivers/`) que la propuesta de microservicios de `main`, pero elige un **estilo macro
 > distinto**: en lugar de *microservicios hexagonales* (7 deployables), la **Santa Trinidad** organiza

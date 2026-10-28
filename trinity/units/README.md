@@ -2,8 +2,7 @@
 
 Profundiza el diseño ya aprobado en los ADRs trinitarios (`../adrs/`, ADR-101..105) y las vistas
 (`../architecture/`), aplicando **ADD** (Attribute-Driven Design, 4 iteraciones) y **SDD**
-(Spec-Driven Development) con contratos OpenAPI / JSON-Schema. Mismo nivel de detalle que el paquete
-`../../microservices/` de la rama `main`, pero **re-particionado en 3 unidades** en lugar de 7
+(Spec-Driven Development) con contratos OpenAPI / JSON-Schema. Mismo nivel de detalle que el paquete de servicios de la rama `main` (consolidado ahora en este directorio), pero **re-particionado en 3 unidades** en lugar de 7
 microservicios.
 
 ## Cómo leer este paquete

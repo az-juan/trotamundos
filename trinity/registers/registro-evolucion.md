@@ -52,7 +52,7 @@ Changelog cronológico de los cambios de documentación de la arquitectura **Tri
 - **Motivo:** presentar a Trinity como la arquitectura escogida, mantener los ADRs y drivers adecuados, y registrar la evolución conforme a la SPEC (Paso 8).
 - **Trazabilidad:** SPEC-001 §5 (MADR con ≥3 opciones), Paso 8 (cierre de gobernanza), CON-3 (vistas + ADRs), Regla 2 (coherencia).
 - **Verificación:** todos los bloques mermaid nuevos validados con el parser real; sin tablas corruptas.
-- **Commit:** *(pendiente de commit en esta sesión)*.
+- **Commit:** `a3a8364` (creación de `units/` y re-marca de la Trinidad como arquitectura elegida).
 
 ---
 

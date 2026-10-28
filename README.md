@@ -31,3 +31,5 @@ Conserva el escalado y aislamiento por perfil de carga de los microservicios (ba
 con **solo 3 deployables** en vez de 7: sin service mesh, sin Kubernetes en Fase 0, un solo Droplet con
 Docker Compose. Se respeta la sobriedad operativa exigida por las restricciones del proyecto (equipo
 pequeño, poco tiempo, presupuesto limitado) y se preserva la vía de extracción de módulo a servicio.
+
+![Pater-Filius-Spiritus](./images/Pater-Spiritus-Filius.png)

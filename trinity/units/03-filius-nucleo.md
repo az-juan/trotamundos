@@ -2,7 +2,7 @@
 
 > **Rol**: dominio operacional transaccional (OLTP).
 > **Perfil de carga**: per-request, I/O (SLA ≤ 800 ms, QA-6).
-> **ADR de origen**: 102 (unidad), 103 (aristas REST con Pater y NATS con Spiritus). Complementa: 104 (esquema PG), 104-JWT.
+> **ADR de origen**: 102 (unidad), 103 (aristas REST con Pater y NATS con Spiritus). Complementa: 104 (esquema PG), 014 (JWT RS256 para autenticación).
 > **Colapsa** los deployables de `main`: Itinerary (ADR-001) + Integration (ADR-007), ahora **módulos
 > internos en proceso** dentro de `units/filius`.
 

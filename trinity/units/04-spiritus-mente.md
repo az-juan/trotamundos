@@ -2,7 +2,7 @@
 
 > **Rol**: procesamiento asíncrono y analítica.
 > **Perfil de carga**: batch, CPU/OLAP, **bursty** (QA-3).
-> **ADR de origen**: 102 (unidad), 103 (aristas NATS con Filius y read-model/SSE con Pater). Complementa: 104 (ClickHouse exclusivo), 104 (esquema PG).
+> **ADR de origen**: 102 (unidad), 103 (aristas NATS con Filius y read-model/SSE con Pater). Complementa: 104 (ClickHouse exclusivo + esquema PG compartido).
 > **Colapsa** los deployables de `main`: Email Ingest (ADR-008) + Analytics (ADR-010), ahora **módulos
 > internos en proceso** dentro de `units/spiritus`.
 
