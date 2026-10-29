@@ -1,3 +1,5 @@
+# Concerns
+
 + CON-1: Realizar un proceso de ADD de 4 iteraciones para el sistema "Trotamundos", usando SDD (Spec-Driven Development).
 
 + CON-2: Generar un Diagrama de Contexto para ubicar el Scope de "Trotamundos".

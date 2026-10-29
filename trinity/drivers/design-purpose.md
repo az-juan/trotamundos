@@ -1,4 +1,4 @@
-# Design Purpose — Trotamundos
+# Design Purpose
 
 > **Propósito del sistema** (driver de negocio, input a ADD Iteración I).
 

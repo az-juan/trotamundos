@@ -1,4 +1,4 @@
-# Constraints — Trotamundos (Trinidad)
+# Constraints
 
 > Restricciones del proyecto (equipo, tiempo, presupuesto) que guían todas las decisiones arquitectónicas (Regla 3 de la SPEC: *Just Enough Architecture* + *YAGNI*).
 

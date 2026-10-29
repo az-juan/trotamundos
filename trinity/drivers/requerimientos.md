@@ -1,10 +1,4 @@
-# Actores
-+ Usuarios (móvil y web)
-+ Aplicación externa de viajes
-+ Agencias de viajes
-+ Mail provider
-+ Analistas
-
+# Requerimientos
 
 - FR-1: El usuario debe poder ver todas sus reservas (hospedaje y transporte) existentes cruzando info de diferentes apps (APIs estándar).
 - FR-2: El sistema debe estar conectado con email para capturar automáticamente las reservas.
