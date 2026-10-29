@@ -15,7 +15,7 @@
 ```bash
 git clone https://github.com/az-juan/trotamundos.git
 cd trotamundos
-cp .env.example deploy/.env   # o crear deploy/.env a partir de .env.example
+cp fase_0/.env.example fase_0/deploy/.env   # o crear fase_0/deploy/.env a partir de fase_0/.env.example
 go work sync                  # sincroniza go.work con los 3 módulos + shared
 ```
 
@@ -26,14 +26,14 @@ trotamundos/
 ├── go.work
 ├── units/{pater,filius,spiritus}/go.mod
 ├── shared/go.mod
-├── docs/{api,events}/
-├── deploy/{docker-compose.yml,nginx/}
+├── fase_0/docs/{api,events}/
+├── fase_0/deploy/{docker-compose.yml,nginx/}
 └── trinity/...
 ```
 
 ## 3. Variables de entorno
 
-Copiar `.env.example` a `deploy/.env` y ajustar. Variables mínimas para desarrollo:
+Copiar `fase_0/.env.example` a `fase_0/deploy/.env` y ajustar. Variables mínimas para desarrollo:
 
 | Variable | Unidad | Descripción |
 |----------|--------|-------------|
@@ -48,7 +48,7 @@ Copiar `.env.example` a `deploy/.env` y ajustar. Variables mínimas para desarro
 | `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` | spiritus | OAuth2 para Gmail API |
 | `IMAP_HOST` / `IMAP_USER` / `IMAP_PASS` | spiritus | Conexión IMAP genérica |
 
-Ver `.env.example` completo.
+Ver `fase_0/.env.example` completo.
 
 ## 4. Levantar dependencias (Docker Compose)
 
@@ -124,10 +124,10 @@ cd deploy && docker compose -f docker-compose.e2e.yml up --abort-on-container-ex
 
 ```bash
 # OpenAPI -> tipos Go (oapi-codegen)
-oapi-codegen -config units/pater/internal/gateway/oapi-codegen.yaml docs/api/openapi.yaml
+oapi-codegen -config units/pater/internal/gateway/oapi-codegen.yaml fase_0/docs/api/openapi.yaml
 
 # JSON Schema -> tipos Go (go-jsonschema o quicktype)
-# (ver shared/event para los tipos manuales sincronizados con docs/events/events.yaml)
+# (ver shared/event para los tipos manuales sincronizados con fase_0/docs/events/events.yaml)
 ```
 
 ## 9. Convenciones de desarrollo

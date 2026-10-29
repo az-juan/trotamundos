@@ -1,7 +1,7 @@
 # 05 — Catálogo de eventos (NATS JetStream · arista Filius↔Spiritus)
 
 > Deriva de **ADR-103** (comunicación inter-unidad) y **ADR-104** (datos). Fuente de verdad:
-> `docs/events/events.yaml` (JSON Schema). Los tipos Go se generan/consumen desde `shared/event`.
+> `fase_0/docs/events/events.yaml` (JSON Schema). Los tipos Go se generan/consumen desde `shared/event`.
 > Formato de payload: **JSON** (no Avro, por simplicidad).
 >
 > **Restricción trinitaria (ADR-103):** NATS JetStream se usa **solo en la arista Filius↔Spiritus**.

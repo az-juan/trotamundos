@@ -13,7 +13,7 @@ No contiene dominio operacional; delega lecturas/escrituras en **Filius** por RE
 
 - **gateway/** — punto único de entrada (ADR-013): routing, **validación JWT RS256** (JWKS, ADR-014),
   rate limit por cliente (token bucket, `golang.org/x/time/rate`), proxy inverso hacia Filius,
-  inyección de `X-Correlation-ID`. Generado con `oapi-codegen` desde `docs/api/openapi.yaml`.
+  inyección de `X-Correlation-ID`. Generado con `oapi-codegen` desde `fase_0/docs/api/openapi.yaml`.
 - **web-bff/** — render del servidor con **templ + htmx + Tailwind** (ADR-009): HTML completo en la
   primera respuesta (sin hydration), swap de fragmentos vía htmx, SSE para notificaciones en vivo
   (arista Spiritus→Pater). i18n por región.
@@ -118,7 +118,7 @@ Toda respuesta de error usa el schema `Error` de OpenAPI:
 { "code": "BOOKING_NOT_FOUND", "message": "…", "correlation_id": "…", "details": { } }
 ```
 
-- **Códigos:** `UPPER_SNAKE_CASE`, estables (parte del contrato). Lista inicial: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT`, `IDEMPOTENCY_REPLAY`, `UPSTREAM_TIMEOUT`, `UPSTREAM_UNAVAILABLE`.
+- **Códigos:** `UPPER_SNAKE_CASE`, estables (parte del contrato). Lista canónica (ver `01-arquitectura-global.md` §9): `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, `UPSTREAM_UNAVAILABLE`, `INTERNAL`. Adicionales en Pater: `IDEMPOTENCY_REPLAY`, `UPSTREAM_TIMEOUT`.
 - **HTTP status:** 400 (validación), 401 (auth), 403 (permisos), 404 (no encontrado), 409 (conflicto/idempotencia), 502 (upstream), 503 (no disponible), 504 (timeout).
 - El `correlation_id` se propaga en el header `X-Correlation-ID` y en el body del error.
 

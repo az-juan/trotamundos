@@ -84,12 +84,12 @@ Changelog cronológico de los cambios de documentación de la arquitectura **Tri
 ## 2026-10-28 — Resolución de temas no tratados y refinamiento para la primera iteración de implementación
 - **Tipo:** resolución de gaps + refinamiento (post-revisión completa de consistencia).
 - **Artefactos nuevos:**
-  - `docs/api/openapi.yaml` — OpenAPI 3.1 (auth, trips, bookings, sharing, insights, nearby/GPS, health, envelope de errores).
-  - `docs/events/events.yaml` — JSON Schema de los 6 eventos NATS + streams, retención, idempotencia, migración a Kafka.
+  - `fase_0/docs/api/openapi.yaml` — OpenAPI 3.1 (auth, trips, bookings, sharing, insights, nearby/GPS, health, envelope de errores).
+  - `fase_0/docs/events/events.yaml` — JSON Schema de los 6 eventos NATS + streams, retención, idempotencia, migración a Kafka.
   - `trinity/data/modelo-datos.md` — ERD, DDL por esquema (pater/filius/spiritus), state machine del Booking, ClickHouse (Fase 1), migraciones.
   - `trinity/dev/setup-local.md` — guía de desarrollo local Fase 0.
-  - `deploy/docker-compose.yml` — materializado con healthchecks.
-  - `.env.example` — variables por unidad.
+  - `fase_0/deploy/docker-compose.yml` — materializado con healthchecks.
+  - `fase_0/.env.example` — variables por unidad.
   - `trinity/testing/estrategia-testing.md` — pirámide, contratos, flaky, cobertura.
   - `trinity/ops/operaciones.md` — observabilidad (métricas), backup/restore, privacidad, runbook.
 - **Refinamientos aplicados:**

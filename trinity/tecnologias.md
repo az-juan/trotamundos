@@ -42,8 +42,8 @@
 | **Infra (Fase 1)** | 2.º Droplet (16 GB / 8 vCPU) | — | ClickHouse + Metabase (dueño: Spiritus) | Igual |
 | **Infra (Fase 2)** | K3s + Terraform + ArgoCD | — | K8s ligero + IaC + GitOps | Igual; la Trinidad migra **3 despliegues**, no 7 |
 | **Dashboard datos** | Metabase | latest | Queries ad-hoc del equipo de datos | **Spiritus** |
-| **Contratos** | OpenAPI 3.1 | — | Spec-driven: API del Gateway/BFF | `docs/api/openapi.yaml` (sin cambio) |
-| **Event schemas** | JSON Schema | — | Payloads NATS (`docs/events/events.yaml`) | Se **reduce** el catálogo de subjects (ADR-103) |
+| **Contratos** | OpenAPI 3.1 | — | Spec-driven: API del Gateway/BFF | `fase_0/docs/api/openapi.yaml` (sin cambio) |
+| **Event schemas** | JSON Schema | — | Payloads NATS (`fase_0/docs/events/events.yaml`) | Se **reduce** el catálogo de subjects (ADR-103) |
 
 ## Cambios respecto de `main` (resumen)
 

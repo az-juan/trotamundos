@@ -70,7 +70,7 @@ la Spec):
 - **Se conserva todo lo aprendido:** Go, hexagonal, PostgreSQL/Redis/ClickHouse, NATS, Chi, templ/htmx,
   JWT RS256, GitHub Actions, DigitalOcean, Docker Compose. Solo se **re-particiona** la topología.
 - **Se conserva la vía de extracción:** si una unidad crece, sus módulos internos se dividen en
-  servicios sin tocar el dominio (regla 2-de-de-3, heredada de ADR-001).
+  servicios sin tocar el dominio (regla 2-de-3, heredada de ADR-001).
 
 ## 4. Cómo encaja en el proceso SDD (CON-1 / CON-5)
 
@@ -95,8 +95,8 @@ reutilizan casi intactas:
 | **Vista de despliegue** (asignación a infra) | [architecture/vista_despliegue.md](./architecture/vista_despliegue.md) | `../architecture/vista_despliegue.md` |
 | **Detalle por unidad** (código + dominio + contratos) | [units/](./units/README.md) | `../microservices/01..09` |
 | **Modelo de datos** (ERD, DDL, state machine Booking) | [data/modelo-datos.md](./data/modelo-datos.md) | (nuevo) |
-| **Contratos (OpenAPI 3.1)** | [../docs/api/openapi.yaml](../docs/api/openapi.yaml) | `../docs/api/openapi.yaml` |
-| **Contratos (eventos NATS, JSON Schema)** | [../docs/events/events.yaml](../docs/events/events.yaml) | `../docs/events/events.yaml` |
+| **Contratos (OpenAPI 3.1)** | [../fase_0/docs/api/openapi.yaml](../fase_0/docs/api/openapi.yaml) | (nuevo, materializado en Fase 0) |
+| **Contratos (eventos NATS, JSON Schema)** | [../fase_0/docs/events/events.yaml](../fase_0/docs/events/events.yaml) | (nuevo, materializado en Fase 0) |
 | **Desarrollo local** | [dev/setup-local.md](./dev/setup-local.md) | (nuevo) |
 | **Estrategia de testing** | [testing/estrategia-testing.md](./testing/estrategia-testing.md) | (nuevo) |
 | **Operaciones** (observabilidad, backup, privacidad) | [ops/operaciones.md](./ops/operaciones.md) | (nuevo) |

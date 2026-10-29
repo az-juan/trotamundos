@@ -19,7 +19,7 @@ Los servicios se comunican de forma asíncrona para: propagar cambios de reserva
 
 - 1 nodo en Fase 0 (Docker Compose), 3 nodos en cluster a partir de Fase 1.
 - Streams con retención configurable (7 días para dead letters, 30 días para eventos de viaje).
-- JSON como formato de payload (no Avro, para simplicidad; el schema se documenta en `docs/api/events.yaml`).
+- JSON como formato de payload (no Avro, para simplicidad; el schema se documenta en `fase_0/docs/api/events.yaml`).
 
 ### Consecuencias
 

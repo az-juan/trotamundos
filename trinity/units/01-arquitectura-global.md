@@ -22,8 +22,8 @@ graph TB
         F["units/filius (go.mod)<br/>cmd/filius"]
         S["units/spiritus (go.mod)<br/>cmd/spiritus"]
         SH["shared/ (go.mod)<br/>event · resilient · otelsetup · config · idgen"]
-        DEP["deploy/ (docker-compose, nginx)"]
-        DOC["docs/ (openapi.yaml, events.yaml)"]
+        DEP["fase_0/deploy/ (docker-compose, nginx)"]
+        DOC["fase_0/docs/ (openapi.yaml, events.yaml)"]
     end
     GW -. "usa" .-> P
     GW -. "usa" .-> F
@@ -70,10 +70,10 @@ trotamundos/
 │   ├── otelsetup/                # config común de OpenTelemetry
 │   ├── config/                   # carga de entorno/vault
 │   └── idgen/                    # ULID/UUID v7
-├── deploy/
+├── fase_0/deploy/
 │   ├── docker-compose.yml        # Fase 0: nginx + pater + filius + spiritus + nats + redis
 │   └── nginx/conf.d/*.conf       # TLS + routing (único borde expuesto → Pater)
-├── docs/
+├── fase_0/docs/
 │   ├── api/openapi.yaml          # spec-driven: rutas del Gateway + BFFs (Pater)
 │   └── events/events.yaml        # esquemas JSON de los eventos NATS (arista Filius↔Spiritus)
 └── architecture/ · adrs/ · registers/   # vistas, decisiones, registro de evolución
@@ -186,8 +186,8 @@ graph LR
 
 - **Correlation ID** en cada evento y en cada request (`X-Correlation-ID`), propagado por OTel para
   trazabilidad de extremo a extremo (QA-12, Newman ch.10).
-- **Contratos**: OpenAPI 3.1 para las APIs síncronas de Pater (`docs/api/openapi.yaml`); JSON Schema
-  para los eventos de la arista Filius↔Spiritus (`docs/events/events.yaml`). `oapi-codegen` genera
+- **Contratos**: OpenAPI 3.1 para las APIs síncronas de Pater (`fase_0/docs/api/openapi.yaml`); JSON Schema
+  para los eventos de la arista Filius↔Spiritus (`fase_0/docs/events/events.yaml`). `oapi-codegen` genera
   tipos/rutas desde la spec (SDD). Ver [05-catalogo-eventos.md](./05-catalogo-eventos.md).
 
 ## 5. Preocupaciones transversales (cross-cutting)
@@ -252,11 +252,11 @@ Ver `trinity/ops/operaciones.md` §1. Resumen de métricas Prometheus expuestas 
 
 ## 8. Variables de entorno por unidad
 
-Ver `.env.example` (raíz) y `trinity/dev/setup-local.md` §3. Cada unidad carga solo las suyas vía `shared/config` (env + archivo). El artefacto (binario Go) es único; la config varía por entorno (Newman ch.7).
+Ver `fase_0/.env.example` y `trinity/dev/setup-local.md` §3. Cada unidad carga solo las suyas vía `shared/config` (env + archivo). El artefacto (binario Go) es único; la config varía por entorno (Newman ch.7).
 
 ## 9. Error envelope (convención)
 
-Toda respuesta de error usa el schema `Error` de `docs/api/openapi.yaml`:
+Toda respuesta de error usa el schema `Error` de `fase_0/docs/api/openapi.yaml`:
 
 ```json
 { "code": "BOOKING_NOT_FOUND", "message": "…", "correlation_id": "…", "details": { } }

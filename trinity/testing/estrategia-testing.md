@@ -30,7 +30,7 @@
 ## 3. Tests de contrato (SDD)
 
 - **OpenAPI:** `oapi-codegen` genera los handlers; el test verifica que la implementación cumple el spec (round-trip request/response). Herramienta: `schemathesis` o `prism` + `go test`.
-- **Eventos:** `shared/event` valida los payloads contra `docs/events/events.yaml` en boot y en CI (`jsonschema`).
+- **Eventos:** `shared/event` valida los payloads contra `fase_0/docs/events/events.yaml` en boot y en CI (`jsonschema`).
 - **Pact:** Pater (consumer) genera un pact contra Filius (provider). El provider verifica el pact en su pipeline.
 
 ## 4. Flaky tests
