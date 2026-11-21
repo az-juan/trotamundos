@@ -110,6 +110,26 @@ Changelog cronológico de los cambios de documentación de la arquitectura **Tri
 
 ---
 
+## 2026-11-21 — Hardening de Fase 0, reducción de deuda arquitectónica y cierre de infraestructura operativa (ADR-106..108)
+
+- **Tipo:** nuevas decisiones MADR de Iteración IV + refinamiento de modelo de datos/contratos + materialización de infraestructura de `fase_0/deploy/`.
+- **Artefactos nuevos:**
+  - `trinity/adrs/adr-106-identidad-y-preferencias-fase0.md` — propiedad de `filius.users` (con `preferences JSONB` indexado por GIN) en Filius y validación de credenciales vía contrato REST interno `Pater → Filius` (`POST /internal/auth/verify`).
+  - `trinity/adrs/adr-107-persistencia-analitica-fase0.md` — polimorfismo hexagonal en el puerto `AnalyticsRepository` de Spiritus: adaptador PostgreSQL (`spiritus.analytics_events` + `spiritus.insight_aggregates`) en Fase 0 → adaptador ClickHouse en Fase 1.
+  - `trinity/adrs/adr-108-aislamiento-rbac-y-resiliencia-eventos.md` — aislamiento RBAC por esquema desde Fase 0 (`pater_app`, `filius_app`, `spiritus_app`), persistencia JetStream en volumen `nats_data` con retry `Exponential Backoff` en memoria, y reconciliación formal del SLA de `QA-8` (99.9% ≈ 43.2 min/mes en Fase 0 vs. 99.99% ≤ 5 min/mes en Fase 2).
+  - `fase_0/deploy/postgres/init.sql` — DDL completo con los 3 esquemas, roles RBAC, tablas, índices y usuario seed.
+  - `fase_0/deploy/nginx/conf.d/default.conf` — proxy hacia Pater con soporte SSE (`proxy_buffering off` en `/insights/stream`) y preservación de firmas HMAC en `/webhooks/`.
+  - `fase_0/deploy/Dockerfile` — build multi-stage Go 1.23 (`CGO_ENABLED=0`) con targets `pater`, `filius` y `spiritus`.
+- **Artefactos actualizados:**
+  - `trinity/data/modelo-datos.md` — ERD y DDL actualizados con `filius.users`, coordenadas `lat`/`lon` en `filius.bookings`, tablas analíticas de Fase 0 en `spiritus` y roles RBAC.
+  - `fase_0/docs/api/openapi.yaml` — añadidos `/auth/refresh`, `/auth/logout`, `/users/me/preferences` (`GET`/`PATCH`), `/mailboxes` (`GET`/`POST`), `/whitelists` (`GET`/`POST`/`DELETE`) y `/webhooks/{provider}` (`POST`).
+  - `fase_0/docs/events/events.yaml` — enriquecidos `BookingConfirmed` y `BookingCancelled` con `user_id`, `type`, `destination` y `segments`; documentada la política `publisher_resilience`.
+  - `fase_0/deploy/docker-compose.yml` y `fase_0/.env.example` — volumen `nats_data:/data` (`-sd /data`), roles RBAC por unidad y `SPIRITUS_ANALYTICS_DRIVER=postgres`.
+  - `README.md`, `trinity/README.md`, `trinity/units/01..05`, `trinity/architecture/vista_cyc.md`, `trinity/architecture/vista_despliegue.md`, `trinity/drivers/constraints.md`, `trinity/ops/operaciones.md`, `trinity/dev/setup-local.md`, `trinity/registers/deuda-arquitectonica.md` y `trinity/registers/transiciones.md` — sincronizados con `ADR-106..108`.
+- **Trazabilidad:** SPEC-001 Regla 2 (coherencia), Regla 3 (sobriedad operativa), Regla 4 (MADR ≥ 3 opciones), Paso 8 (gobernanza y reducción de deuda `DT-01`, `DT-03`, `DT-05`).
+
+---
+
 ## Futuro (borrador — anotar al concretar)
 
 - Extracción de **Notification** como módulo de Spiritus (Fase 1) → actualizar `units/04` y `05`.

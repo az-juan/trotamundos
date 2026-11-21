@@ -92,13 +92,14 @@ sequenceDiagram
 
 ## 6. Flujo de autenticación (JWT RS256, Fase 0)
 
-Fase 0: **el Gateway de Pater emite y valida** el JWT (ADR-014 adaptado; extracción de Identity en Fase 2).
+Fase 0: **el Gateway de Pater emite y valida** el JWT (ADR-014 adaptado y refinado en ADR-106; extracción de Identity en Fase 2).
 
-- **Emisión:** `POST /auth/login` valida credenciales contra `filius` (tabla de usuarios en esquema `filius`) y emite un JWT RS256 con claims: `sub` (user_id), `email`, `iat`, `exp` (15 min), `jti`.
+- **Emisión:** `POST /auth/login` en Pater delega la verificación de credenciales a **Filius** mediante una llamada REST interna (`POST /internal/auth/verify`, que consulta `filius.users` sin que Pater toque el esquema `filius`, ADR-106) y emite un JWT RS256 con claims: `sub` (user_id), `email`, `iat`, `exp` (15 min), `jti`.
+- **Preferencias del usuario:** `GET / PATCH /users/me/preferences` expone y actualiza el documento `filius.users.preferences` (JSONB: `locale`, `currency`, `gps_radius_km` y `travel_preferences`) delegando por REST interno en Filius (ADR-106).
 - **Validación:** cada request al Gateway valida la firma con la clave pública (JWKS en `/.well-known/jwks.json`), verifica `exp` y `iss`, e inyecta `X-User-Id` + `X-Correlation-ID` hacia los BFFs.
 - **Refresh:** `POST /auth/refresh` con `refresh_token` (opaco, en Redis, TTL 7 días) → nuevo access token.
 - **Rotación de claves:** la clave privada vive en `JWT_PRIVATE_KEY_FILE` (env). Rotación manual en Fase 0; en Fase 2, Vault + OIDC.
-- **Logout:** revocación del refresh token en Redis (access token expira solo).
+- **Logout:** `POST /auth/logout` revoca el refresh token en Redis (el access token expira solo).
 
 ## 7. Protocolo SSE (notificaciones en vivo)
 

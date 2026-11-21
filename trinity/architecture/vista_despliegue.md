@@ -118,9 +118,10 @@ services:
     depends_on: [nats]
     restart: unless-stopped
 
-  nats:         # solo para la arista async Filius↔Spiritus
+  nats:         # solo para la arista async Filius↔Spiritus (ADR-108)
     image: nats:2.10-alpine
-    command: ["-js"]                 # JetStream
+    command: ["-js", "-sd", "/data", "-m", "8222"] # JetStream persistente
+    volumes: ["nats_data:/data"]
     restart: unless-stopped
 
   redis:

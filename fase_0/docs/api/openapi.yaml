@@ -20,8 +20,11 @@ security:
 
 tags:
   - name: auth
+  - name: users
   - name: trips
   - name: bookings
+  - name: mailboxes
+  - name: webhooks
   - name: sharing
   - name: insights
   - name: health
@@ -42,7 +45,7 @@ paths:
   /auth/login:
     post:
       tags: [auth]
-      summary: Autenticacion (Fase 0 - emitida por el Gateway de Pater)
+      summary: Autenticacion (Fase 0 - Pater verifica contra Filius y emite JWT RS256, ADR-106)
       security: []
       requestBody:
         required: true
@@ -57,6 +60,37 @@ paths:
               schema: { $ref: "#/components/schemas/TokenResponse" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Renovar access token usando refresh_token opaco en Redis (TTL 7d)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefreshTokenRequest" }
+      responses:
+        "200":
+          description: Nuevo JWT RS256 emitido
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Revocar refresh_token en Redis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefreshTokenRequest" }
+      responses:
+        "204":
+          description: Sesion revocada
+
   /.well-known/jwks.json:
     get:
       tags: [auth]
@@ -68,6 +102,31 @@ paths:
           content:
             application/json:
               schema: { type: object }
+
+  /users/me/preferences:
+    get:
+      tags: [users]
+      summary: Obtener preferencias del viajero autenticado (ADR-106, QA-13)
+      responses:
+        "200":
+          description: Preferencias del usuario
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserPreferences" }
+    patch:
+      tags: [users]
+      summary: Actualizar preferencias del viajero (locale, moneda, radio GPS, preferencias de viaje)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserPreferences" }
+      responses:
+        "200":
+          description: Preferencias actualizadas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserPreferences" }
 
   /trips:
     get:
@@ -239,6 +298,92 @@ paths:
             text/event-stream:
               schema: { type: string }
 
+  /mailboxes:
+    get:
+      tags: [mailboxes]
+      summary: Listar buzones de correo vinculados por el usuario (FR-2, QA-9)
+      responses:
+        "200":
+          description: Lista de buzones vinculados
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Mailbox" }
+    post:
+      tags: [mailboxes]
+      summary: Vincular un nuevo buzon Gmail (OAuth2) o IMAP para captura automatica (FR-2)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConnectMailboxRequest" }
+      responses:
+        "201":
+          description: Buzon vinculado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Mailbox" }
+
+  /whitelists:
+    get:
+      tags: [mailboxes]
+      summary: Listar remitentes seguros en la whitelist del usuario (FR-3)
+      responses:
+        "200":
+          description: Lista de remitentes autorizados
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WhitelistSender" }
+    post:
+      tags: [mailboxes]
+      summary: Agregar remitente seguro a la whitelist (FR-3)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateWhitelistRequest" }
+      responses:
+        "201":
+          description: Remitente agregado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WhitelistSender" }
+
+  /whitelists/{whitelistId}:
+    parameters:
+      - { in: path, name: whitelistId, required: true, schema: { type: string } }
+    delete:
+      tags: [mailboxes]
+      summary: Eliminar remitente de la whitelist (FR-3)
+      responses:
+        "204":
+          description: Eliminado
+
+  /webhooks/{provider}:
+    parameters:
+      - { in: path, name: provider, required: true, schema: { type: string } }
+      - { in: header, name: X-Signature, required: true, schema: { type: string, description: "Firma HMAC-SHA256 del payload" } }
+      - { in: header, name: Idempotency-Key, required: false, schema: { type: string } }
+    post:
+      tags: [webhooks]
+      summary: Recepcion de webhooks firmados de proveedores externos (aerolineas, hoteles, rentadoras)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "202":
+          description: Webhook verificado y aceptado para procesamiento
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -300,6 +445,57 @@ components:
         token_type: { type: string, enum: [Bearer] }
         expires_in: { type: integer }
         refresh_token: { type: string }
+
+    RefreshTokenRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+
+    UserPreferences:
+      type: object
+      properties:
+        locale: { type: string, default: "es" }
+        currency: { type: string, default: "USD" }
+        gps_radius_km: { type: number, default: 50 }
+        travel_preferences:
+          type: object
+          additionalProperties: true
+          description: "Preferencias de alojamiento, transporte y rutas del viajero (ADR-106)"
+
+    Mailbox:
+      type: object
+      required: [id, provider, email, created_at]
+      properties:
+        id: { type: string }
+        provider: { type: string, enum: [gmail, imap] }
+        email: { type: string, format: email }
+        last_scan_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    ConnectMailboxRequest:
+      type: object
+      required: [provider, email]
+      properties:
+        provider: { type: string, enum: [gmail, imap] }
+        email: { type: string, format: email }
+        oauth_code: { type: string }
+        imap_host: { type: string }
+        imap_secret: { type: string }
+
+    WhitelistSender:
+      type: object
+      required: [id, sender, created_at]
+      properties:
+        id: { type: string }
+        sender: { type: string }
+        created_at: { type: string, format: date-time }
+
+    CreateWhitelistRequest:
+      type: object
+      required: [sender]
+      properties:
+        sender: { type: string, description: "Email o dominio autorizado (ej. @aerolinea.com)" }
 
     Trip:
       type: object

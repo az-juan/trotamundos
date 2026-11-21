@@ -11,12 +11,13 @@
 Filius es el **Núcleo** transaccional del sistema. Posee la verdad de las reservas y los viajes y es el
 encargado de enriquecerlas con los proveedores externos.
 
-- **itinerary/** — el módulo central (bounded context: Viaje, Reserva, Viajero, Ciclo de Vida):
+- **itinerary/** — el módulo central (bounded context: Usuario/Preferencias, Viaje, Reserva, Viajero, Ciclo de Vida):
+  - **Usuarios y Preferencias (`filius.users`, ADR-106)**: verificación de credenciales vía `POST /internal/auth/verify` para Pater y gestión de preferencias del viajero (`preferences JSONB`: `locale`, `currency`, `gps_radius_km` y preferencias de viaje).
   - **Viajes (Trip)**: agrupación de reservas y viajeros (FR-5: agrupar por viaje, auto-archivar al finalizar).
-  - **Reservas (Booking)**: hospedaje y transporte, con state machine de ciclo de vida.
+  - **Reservas (Booking)**: hospedaje y transporte, con state machine de ciclo de vida, coordenadas opcionales (`lat`, `lon` para `GET /trips/nearby`, QA-13) y segmentos tipados en `details JSONB`.
   - **Viajeros (Traveler)**; **compartir itinerario** con permisos de visualización (QA-10, FR-8);
     **deep-linking** a apps de terceros (FR-6).
-  - Publica `booking.confirmed` / `trip.*`; consume `booking.discovered` (crea la reserva desde el correo).
+  - Publica hechos ricos `booking.confirmed` / `trip.*` (con retry en memoria `Exponential Backoff`, ADR-108); consume `booking.discovered` (crea la reserva desde el correo).
 - **integration/** — adaptación a proveedores heterogéneos (aerolíneas, hoteles, rentadoras):
   - Contratos de proveedor (REST/NDC), **webhooks** firmados (HMAC), y la **cadena de resiliencia**
     (circuit breaker → retry → rate limit, ADR-007).

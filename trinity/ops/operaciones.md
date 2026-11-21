@@ -28,7 +28,7 @@
 - Cada request y evento arrastra `trace_id`/`span_id`; el `correlation_id` se propaga como atributo.
 
 ### SLO de referencia
-- Disponibilidad **99.9%** (~2h11m/mes de caída, QA-8).
+- Disponibilidad en **Fase 0**: **99.9%** (~43.2 min/mes de caída máxima en 1 Droplet; trade-off documentado en ADR-108 y `DT-03` frente al objetivo ideal **99.99%** ≤ 5 min/mes de QA-8, que se alcanza en Fase 2 con K3s multi-nodo).
 - Respuesta web **p95 ≤ 800 ms** (QA-6).
 - FCP móvil **< 1.4 s** (QA-7).
 - Refresco de terceros **< 5 min** (QA-5).
@@ -59,7 +59,7 @@
 
 - **TLS:** Let's Encrypt vía Certbot, renovación automática. Nginx como único borde expuesto (ADR-105).
 - **Secretos:** Fase 0 vía env del compose; Fase 2 → Vault con secretos por instancia, rotación y TTL (Newman ch.11).
-- **Mínimo privilegio DB:** cada unidad conecta con un rol PG con acceso solo a su esquema (Fase 2: control de acceso por rol).
+- **Mínimo privilegio DB (activo desde Fase 0, ADR-108):** cada unidad conecta con su propio rol PostgreSQL (`pater_app`, `filius_app`, `spiritus_app`) con permisos de lectura y escritura restringidos exclusivamente a su esquema (`pater`, `filius`, `spiritus`), mitigando de raíz el riesgo de *content coupling* (`DT-01`).
 - **Cifrado en reposo:** PG managed (disk encryption), ClickHouse (Fase 1).
 - **Backups cifrados:** sí (DO managed).
 - **Patching:** actualizar imágenes base semanalmente; `dependabot` para Go modules.

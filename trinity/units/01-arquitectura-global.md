@@ -204,7 +204,7 @@ graph LR
   "no matcheado" del parser, lag de Consumer).
 - **Tracing**: OpenTelemetry → OTLP (Fase 1: Grafana Tempo/Jaeger). Cada request y cada evento
   arrastran trace/span ID.
-- **SLO de referencia**: disponibilidad 99.9% (~2h11m/mes de caída, QA-8); respuesta web p95 ≤ 800 ms.
+- **SLO de referencia**: disponibilidad en Fase 0 del **99.9%** (~43.2 min/mes de caída en 1 Droplet; trade-off documentado frente al objetivo ideal del 99.99% ≤ 5 min/mes de QA-8, que se alcanza en Fase 2 con K3s multi-nodo, ADR-108); respuesta web p95 ≤ 800 ms.
 
 ### 5.3 Manejo de errores
 - Dominio: errores tipados (`ErrBookingNotFound`, `ErrTripNotComplete`) que el adaptador traduce a
@@ -266,6 +266,4 @@ Toda respuesta de error usa el schema `Error` de `fase_0/docs/api/openapi.yaml`:
 - HTTP status: 400 validación, 401 auth, 403 permisos, 404 no encontrado, 409 conflicto/idempotencia, 502 upstream, 503 no disponible, 504 timeout.
 - `correlation_id` en header `X-Correlation-ID` y en body.
 
-> **PostgreSQL es compartido con esquemas segregados** (ADR-104): cada unidad escribe **solo** en su
-> esquema (`pater`/`filius`/`spiritus`); lo que necesita de otra unidad viene por contrato (evento o
-> read-model), nunca por escribir en el esquema ajeno. **ClickHouse** es exclusivo de Spiritus (OLAP).
+> **PostgreSQL es compartido con esquemas segregados y RBAC estricto** (ADR-104, ADR-108): cada unidad se conecta con su propio rol (`pater_app`/`filius_app`/`spiritus_app`) y escribe **solo** en su esquema (`pater`/`filius`/`spiritus`); lo que necesita de otra unidad viene por contrato (evento o read-model), nunca por acceder al esquema ajeno. En Fase 0 el módulo analítico de **Spiritus** usa su adaptador PostgreSQL sobre `spiritus.analytics_events` y `spiritus.insight_aggregates`, conmutando a **ClickHouse** en Fase 1 (ADR-107).

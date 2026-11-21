@@ -73,12 +73,25 @@ definitions:
           source: { const: filius }
           payload:
             type: object
-            required: [booking_id, trip_id, provider, provider_ref, status, confirmed_at]
+            required: [booking_id, trip_id, user_id, type, provider, provider_ref, status, confirmed_at]
             properties:
               booking_id: { type: string }
               trip_id: { type: string }
+              user_id: { type: string, description: "UUID del viajero dueño del viaje (ADR-106)" }
+              type: { type: string, enum: [lodging, transport, car_rental] }
               provider: { type: string }
               provider_ref: { type: string }
+              destination: { type: string, description: "Codigo IATA o ciudad principal del segmento/hospedaje" }
+              segments:
+                type: array
+                items:
+                  type: object
+                  required: [from, to, at]
+                  properties:
+                    from: { type: string }
+                    to: { type: string }
+                    at: { type: string, format: date-time }
+                    category: { type: string }
               status: { const: confirmed }
               confirmed_at: { type: string, format: date-time }
 
@@ -94,11 +107,14 @@ definitions:
           source: { const: filius }
           payload:
             type: object
-            required: [booking_id, trip_id, provider, cancelled_at]
+            required: [booking_id, trip_id, user_id, type, provider, cancelled_at]
             properties:
               booking_id: { type: string }
               trip_id: { type: string }
+              user_id: { type: string }
+              type: { type: string, enum: [lodging, transport, car_rental] }
               provider: { type: string }
+              destination: { type: string }
               cancelled_at: { type: string, format: date-time }
               reason: { type: string, enum: [user, provider, system] }
 
@@ -178,6 +194,14 @@ streams:
     subjects: ["notification.>"]
     retention: 30d
     consumers: [spiritus-analytics]
+
+# ---------------------------------------------------------------------------
+# Resiliencia del productor (ADR-108, mitigacion DT-05)
+# ---------------------------------------------------------------------------
+publisher_resilience:
+  mechanism: "publicacion sincrona tras COMMIT local con retry en memoria (Exponential Backoff: 100ms, 500ms, 2s + jitter +-20%)"
+  persistence: "NATS JetStream file store en volumen persistente nats_data (/data)"
+  reference: "ADR-108"
 
 # ---------------------------------------------------------------------------
 # Idempotencia del consumidor

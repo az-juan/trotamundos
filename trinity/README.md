@@ -106,6 +106,9 @@ reutilizan casi intactas:
 | ADR-103 Comunicación inter-unidad (triángulo) | [adrs/adr-103-comunicacion-inter-unidad.md](./adrs/adr-103-comunicacion-inter-unidad.md) | (adapta ADR-005/006/013) |
 | ADR-104 Capa de datos compartida con segregación por esquema | [adrs/adr-104-capa-datos-compartida.md](./adrs/adr-104-capa-datos-compartida.md) | (adapta ADR-004) |
 | ADR-105 Despliegue: 3 contenedores, Docker Compose, DO | [adrs/adr-105-despliegue-trinidad.md](./adrs/adr-105-despliegue-trinidad.md) | (adapta ADR-012) |
+| ADR-106 Propiedad del modelo de usuario (`users`), preferencias y login en Fase 0 | [adrs/adr-106-identidad-y-preferencias-fase0.md](./adrs/adr-106-identidad-y-preferencias-fase0.md) | (refina ADR-104 / ADR-014) |
+| ADR-107 Estrategia de persistencia analítica (`Spiritus`) en Fase 0 vs. Fase 1 | [adrs/adr-107-persistencia-analitica-fase0.md](./adrs/adr-107-persistencia-analitica-fase0.md) | (refina ADR-104 / ADR-010) |
+| ADR-108 Aislamiento RBAC en PG, resiliencia de publicación a NATS y SLA Fase 0 | [adrs/adr-108-aislamiento-rbac-y-resiliencia-eventos.md](./adrs/adr-108-aislamiento-rbac-y-resiliencia-eventos.md) | (mitiga DT-01, DT-03, DT-05) |
 
 ## 6. Diagrama de contexto (C4 nivel 1, CON-2)
 

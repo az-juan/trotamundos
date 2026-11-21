@@ -17,8 +17,9 @@ bursty de CPU no degrade el SLA de 800 ms (QA-15, CQRS).
   - **Dedup** SHA256 + **whitelist** de remitentes (Redis); parseo por reglas (regex → template) con
     `net/mail`; publica `booking.discovered` (arista con Filius).
   - Pool de parsers para absorber picos (QA-3). Corre en **cron/IDLE/webhook**, no per-request.
-- **analytics/** — ingestión **batch** a **ClickHouse** (OLAP, dueño exclusivo de Spiritus):
-  - Consuma **todos** los eventos de dominio (`booking.>`, `trip.>`) y los pre-agrega.
+- **analytics/** — ingestión **batch** detrás del puerto `AnalyticsRepository` (OLAP, dueño exclusivo de Spiritus, ADR-107):
+  - **Polimorfismo por fase (ADR-107):** en **Fase 0** (`SPIRITUS_ANALYTICS_DRIVER=postgres`) inyecta el adaptador `PostgresAnalyticsRepo` sobre `spiritus.analytics_events` y `spiritus.insight_aggregates` (respetando el presupuesto de ~$80/mes); en **Fase 1** (`SPIRITUS_ANALYTICS_DRIVER=clickhouse`) inyecta `ClickHouseAnalyticsRepo` hacia el 2.º Droplet de ClickHouse sin tocar dominio ni casos de uso.
+  - Consume **todos** los eventos de dominio (`booking.>`, `trip.>`) con el historial rico por `user_id`, `type`, `destination` y `segments`, y los pre-agrega.
   - Sirve el **read-model** de insights a Pater (dashboard, FR-7) y a partners anónimos (FR-9, monetización).
   - Expone métricas de lag de consumidor y tasa de "no matcheado" del parser.
 

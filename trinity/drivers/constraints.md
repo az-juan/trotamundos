@@ -22,10 +22,11 @@
 
 ## 4. Operacionales
 
-- **Disponibilidad objetivo:** 99.9% (~2h11m/mes de caída, QA-8).
+- **Disponibilidad objetivo:** en **Fase 0** (1 Droplet) el SLO alcanzable es **99.9%** (~43.2 min/mes de caída), como trade-off deliberado por presupuesto frente al objetivo ideal del **99.99%** (≤ 5 min/mes de `QA-8`), el cual se alcanza en **Fase 2** con K3s multi-nodo (ADR-108, `DT-03`).
 - **Deploy:** < 2 min por unidad; build-once, deploy atómico con `--no-deps`.
 - **Sin self-healing automático** en Fase 0 (mitigado: `restart: unless-stopped` + UptimeRobot).
-- **Sin HA de NATS** en Fase 0 (1 nodo; suficiente porque solo una arista lo usa).
+- **Sin HA de NATS** en Fase 0 (1 nodo con volumen persistente `nats_data` y retry en memoria con exponential backoff; suficiente porque solo una arista lo usa, ADR-108).
+- **Aislamiento RBAC en PostgreSQL desde Fase 0:** roles `pater_app`, `filius_app` y `spiritus_app` restringidos a su propio esquema (ADR-108, mitiga `DT-01`).
 
 ## 5. Técnicas
 

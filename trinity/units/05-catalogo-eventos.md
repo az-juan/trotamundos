@@ -69,8 +69,10 @@ graph LR
   "type": "booking.confirmed",
   "source": "filius",
   "payload": {
-    "booking_id": "…", "trip_id": "…",
-    "provider": "aerolineaX", "provider_ref": "PNR123",
+    "booking_id": "…", "trip_id": "…", "user_id": "…",
+    "type": "transport", "provider": "aerolineaX", "provider_ref": "PNR123",
+    "destination": "GRU",
+    "segments": [{ "from": "EZE", "to": "GRU", "at": "2026-11-01T22:00:00Z", "category": "economy" }],
     "status": "confirmed", "confirmed_at": "2026-10-27T10:00:05Z"
   }
 }
@@ -82,8 +84,9 @@ graph LR
   "type": "booking.cancelled",
   "source": "filius",
   "payload": {
-    "booking_id": "…", "trip_id": "…",
-    "provider": "hotelY", "cancelled_at": "…", "reason": "user"
+    "booking_id": "…", "trip_id": "…", "user_id": "…",
+    "type": "lodging", "provider": "hotelY", "destination": "GRU",
+    "cancelled_at": "…", "reason": "user"
   }
 }
 ```

@@ -1,12 +1,13 @@
 # Trotamundos — Modelo de datos (Trinidad)
 
-> **Rama:** `main` (consolidada) · **Fase:** 0 (MVP). Deriva de ADR-104 (capa de datos compartida con segregación por esquema) y de los bounded contexts de `units/03` (Filius) y `units/04` (Spiritus).
+> **Rama:** `main` (consolidada) · **Fase:** 0 (MVP). Deriva de ADR-104 (capa de datos compartida con segregación por esquema), ADR-106 (usuarios y preferencias en `filius`), ADR-107 (adaptador analítico PostgreSQL en Fase 0 → ClickHouse en Fase 1), ADR-108 (RBAC por esquema desde Fase 0) y de los bounded contexts de `units/03` (Filius) y `units/04` (Spiritus).
 
-## 1. Principios (ADR-104)
+## 1. Principios (ADR-104, ADR-106, ADR-107, ADR-108)
 
 - **Un solo PostgreSQL managed** (DO), con **un esquema por unidad**: `pater`, `filius`, `spiritus`.
-- Cada unidad es dueña de sus tablas y **escribe solo en su esquema**. Lo que necesita de otra unidad viene por **contrato** (evento NATS o read-model), nunca por escribir en el esquema ajeno.
-- **ClickHouse** (Droplet 2, Fase 1) es exclusivo de Spiritus (OLAP). PostgreSQL solo OLTP.
+- **Aislamiento RBAC por esquema desde Fase 0 (ADR-108):** cada unidad se conecta con su propio rol de base de datos (`pater_app`, `filius_app`, `spiritus_app`) que posee permisos `USAGE, CREATE, SELECT, INSERT, UPDATE, DELETE` **exclusivamente** sobre su esquema. Lo que necesita de otra unidad viene por **contrato** (evento NATS o endpoint REST / read-model), nunca por leer o escribir en el esquema ajeno.
+- **Identidad y Preferencias en `filius.users` (ADR-106):** la entidad `users` (con credenciales y `preferences JSONB` indexado con `GIN`) pertenece a **Filius**. **Pater** verifica credenciales llamando a `POST /internal/auth/verify` en **Filius** y emite el JWT RS256.
+- **Polimorfismo analítico por fase (ADR-107):** en **Fase 0**, el puerto `AnalyticsRepository` de **Spiritus** utiliza un adaptador PostgreSQL sobre su propio esquema (`spiritus.analytics_events` + `spiritus.insight_aggregates`), manteniendo el costo en ~$80/mes. En **Fase 1** (Droplet 2) se conmuta al adaptador **ClickHouse** sin tocar casos de uso.
 - **Redis** es caché compartido (sesiones, rate limit, dedup, idempotencia) — sin datos de dominio con dueño único.
 - Migración a DBs separadas en Fase 2 si el escalado lo exige (los puertos hexagonales lo absorben, ADR-002).
 
@@ -14,11 +15,23 @@
 
 ```mermaid
 erDiagram
+    USER ||--o{ TRIP : "posee"
+    USER ||--o{ MAILBOX : "vincula"
     TRIP ||--o{ BOOKING : "agrupa"
     TRIP ||--o{ TRAVELER : "incluye"
     TRIP ||--o{ ITINERARY_SHARE : "comparte"
     BOOKING }o--|| TRIP : "pertenece a"
+    MAILBOX ||--o{ INGESTED_EMAIL : "contiene"
 
+    USER {
+        uuid id PK
+        text email UK
+        text password_hash
+        text display_name
+        jsonb preferences
+        timestamptz created_at
+        timestamptz updated_at
+    }
     TRIP {
         uuid id PK
         uuid user_id FK
@@ -36,6 +49,8 @@ erDiagram
         text status
         text provider
         text provider_ref
+        float8 lat
+        float8 lon
         jsonb details
         timestamptz created_at
         timestamptz updated_at
@@ -74,23 +89,52 @@ erDiagram
     INSIGHT_AGGREGATE {
         uuid id PK
         text dimension
+        text key
         text period
-        bigint count
+        float8 metric_val
         timestamptz computed_at
     }
 ```
 
-> **Nota:** `MAILBOX`, `INGESTED_EMAIL` viven en el esquema `spiritus`; `INSIGHT_AGGREGATE` vive en ClickHouse (OLAP), no en PostgreSQL. El ERD las muestra juntas para dar la visión completa del dominio.
+> **Nota:** `USER`, `TRIP`, `BOOKING`, `TRAVELER`, `ITINERARY_SHARE` viven en el esquema `filius`. `MAILBOX`, `INGESTED_EMAIL` y (en Fase 0, ADR-107) `ANALYTICS_EVENT` e `INSIGHT_AGGREGATE` viven en el esquema `spiritus` (migrando a ClickHouse en Fase 1). El ERD las muestra juntas para dar la visión completa del dominio.
 
-## 3. DDL — esquema `filius` (dominio operacional, OLTP)
+## 2.1. DDL — Roles RBAC por esquema (ADR-108, mitiga DT-01 desde Fase 0)
+
+```sql
+CREATE SCHEMA IF NOT EXISTS pater;
+CREATE SCHEMA IF NOT EXISTS filius;
+CREATE SCHEMA IF NOT EXISTS spiritus;
+
+CREATE ROLE pater_app LOGIN PASSWORD 'pater_dev';
+CREATE ROLE filius_app LOGIN PASSWORD 'filius_dev';
+CREATE ROLE spiritus_app LOGIN PASSWORD 'spiritus_dev';
+
+REVOKE ALL ON SCHEMA public, pater, filius, spiritus FROM PUBLIC;
+GRANT USAGE, CREATE ON SCHEMA pater TO pater_app;
+GRANT USAGE, CREATE ON SCHEMA filius TO filius_app;
+GRANT USAGE, CREATE ON SCHEMA spiritus TO spiritus_app;
+```
+
+## 3. DDL — esquema `filius` (dominio operacional, OLTP, ADR-106)
 
 ```sql
 -- Esquema dueño: Filius (Itinerary + Integration)
 CREATE SCHEMA IF NOT EXISTS filius;
 
+CREATE TABLE filius.users (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email         TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    display_name  TEXT NOT NULL,
+    preferences   JSONB NOT NULL DEFAULT '{"locale":"es","currency":"USD","gps_radius_km":50}'::jsonb,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_users_preferences_gin ON filius.users USING GIN (preferences);
+
 CREATE TABLE filius.trips (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID NOT NULL,
+    user_id     UUID NOT NULL REFERENCES filius.users(id) ON DELETE CASCADE,
     name        TEXT NOT NULL,
     status      TEXT NOT NULL DEFAULT 'upcoming'
                 CHECK (status IN ('upcoming','active','archived')),
@@ -109,6 +153,8 @@ CREATE TABLE filius.bookings (
                  CHECK (status IN ('discovered','pending','confirmed','cancelled','disrupted','archived')),
     provider     TEXT NOT NULL,
     provider_ref TEXT NOT NULL,
+    lat          DOUBLE PRECISION,
+    lon          DOUBLE PRECISION,
     details      JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -116,6 +162,7 @@ CREATE TABLE filius.bookings (
 );
 CREATE INDEX idx_bookings_trip ON filius.bookings (trip_id);
 CREATE INDEX idx_bookings_status ON filius.bookings (status);
+CREATE INDEX idx_bookings_coords ON filius.bookings (lat, lon) WHERE lat IS NOT NULL AND lon IS NOT NULL;
 
 CREATE TABLE filius.travelers (
     id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -136,10 +183,12 @@ CREATE TABLE filius.itinerary_shares (
 );
 ```
 
-## 4. DDL — esquema `spiritus` (ingesta + analítica operacional)
+> **Estructura esperada de `filius.bookings.details` (JSONB):** incluye `destination` (IATA/ciudad), `segments` (`[{from, to, at, category}]`) y atributos específicos del medio, mientras que `lat` y `lon` indexan la ubicación principal para consultas de cercanía (`GET /trips/nearby`, `QA-13`).
+
+## 4. DDL — esquema `spiritus` (ingesta + adaptador analítico Fase 0, ADR-107)
 
 ```sql
--- Esquema dueño: Spiritus (Email Ingest + Analytics). ClickHouse es el OLAP real.
+-- Esquema dueño: Spiritus (Email Ingest + Analytics Fase 0). En Fase 1 el OLAP migra a ClickHouse.
 CREATE SCHEMA IF NOT EXISTS spiritus;
 
 CREATE TABLE spiritus.mailboxes (
@@ -171,6 +220,32 @@ CREATE TABLE spiritus.whitelist_senders (
     sender     TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (user_id, sender)
+);
+
+-- Tablas del adaptador PostgresAnalyticsRepo (Fase 0, ADR-107)
+CREATE TABLE spiritus.analytics_events (
+    event_id       TEXT PRIMARY KEY,
+    event_type     TEXT NOT NULL,
+    user_id        UUID,
+    trip_id        UUID,
+    booking_id     UUID,
+    provider       TEXT,
+    booking_type   TEXT,
+    destination    TEXT,
+    payload        JSONB NOT NULL DEFAULT '{}'::jsonb,
+    occurred_at    TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX idx_analytics_events_type_date ON spiritus.analytics_events (event_type, occurred_at DESC);
+CREATE INDEX idx_analytics_events_user ON spiritus.analytics_events (user_id, occurred_at DESC);
+
+CREATE TABLE spiritus.insight_aggregates (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    dimension   TEXT NOT NULL,
+    key         TEXT NOT NULL,
+    period      TEXT NOT NULL CHECK (period IN ('7d','30d','90d')),
+    metric_val  DOUBLE PRECISION NOT NULL DEFAULT 0,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (dimension, key, period)
 );
 ```
 

@@ -149,14 +149,14 @@ sequenceDiagram
     participant U as Browser
     participant WB as Pater · web-bff
     participant AN as Spiritus · analytics
-    participant CH as ClickHouse
+    participant OLAP as Store Analítico (PG spiritus en Fase 0 / ClickHouse en Fase 1)
     U->>WB: GET /insights (HTTPS, JWT)
     WB->>AN: GET read-model/insights (arista Spiritus→Pater)
-    AN->>CH: query a vista materializada (≤ 30 s, batch)
-    CH-->>AN: agregados (tendencias, cohortes, FR-7)
+    AN->>OLAP: query a proyecciones pre-agregadas (ADR-107)
+    OLAP-->>AN: agregados (tendencias, cohortes, FR-7)
     AN-->>WB: JSON de insights
     WB-->>U: HTML/fragmento htmx
-    Note over AN,CH: No pasa por Filius/PostgreSQL → la analítica pesada no degrada el SLA de 800 ms (QA-15).
+    Note over AN,OLAP: No pasa por Filius ni por el esquema filius → la analítica no degrada el SLA de 800 ms (QA-15, ADR-107).
 ```
 
 ## Leyenda

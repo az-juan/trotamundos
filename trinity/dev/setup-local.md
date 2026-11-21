@@ -37,14 +37,15 @@ Copiar `fase_0/.env.example` a `fase_0/deploy/.env` y ajustar. Variables mínima
 
 | Variable | Unidad | Descripción |
 |----------|--------|-------------|
-| `PATER_PG_DSN` | pater | DSN a PostgreSQL (esquema `pater`) |
-| `PATER_REDIS_URL` | pater | `redis://localhost:6379` |
+| `PATER_PG_DSN` | pater | DSN a PostgreSQL con rol `pater_app` (esquema `pater`, ADR-108) |
+| `PATER_REDIS_URL` | pater | `redis://localhost:6379/0` |
 | `JWT_PRIVATE_KEY_FILE` | pater | Ruta a la clave privada RS256 |
-| `FILIUS_PG_DSN` | filius | DSN a PostgreSQL (esquema `filius`) |
-| `FILIUS_REDIS_URL` | filius | `redis://localhost:6379` |
+| `FILIUS_PG_DSN` | filius | DSN a PostgreSQL con rol `filius_app` (esquema `filius`, ADR-108) |
+| `FILIUS_REDIS_URL` | filius | `redis://localhost:6379/1` |
 | `NATS_URL` | filius/spiritus | `nats://localhost:4222` |
-| `SPIRITUS_PG_DSN` | spiritus | DSN a PostgreSQL (esquema `spiritus`) |
-| `SPIRITUS_CH_DSN` | spiritus | `clickhouse://localhost:9000` (Fase 1) |
+| `SPIRITUS_PG_DSN` | spiritus | DSN a PostgreSQL con rol `spiritus_app` (esquema `spiritus`, ADR-108) |
+| `SPIRITUS_ANALYTICS_DRIVER` | spiritus | `postgres` en Fase 0 → `clickhouse` en Fase 1 (ADR-107) |
+| `SPIRITUS_CH_DSN` | spiritus | `clickhouse://localhost:9000` (activo en Fase 1, ADR-107) |
 | `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` | spiritus | OAuth2 para Gmail API |
 | `IMAP_HOST` / `IMAP_USER` / `IMAP_PASS` | spiritus | Conexión IMAP genérica |
 
