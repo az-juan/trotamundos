@@ -130,6 +130,22 @@ Changelog cronológico de los cambios de documentación de la arquitectura **Tri
 
 ---
 
+## 2026-11-22 — Asistente Virtual (FR-10/FR-11, QA-16/QA-17): auditoría de consistencia, ADR-109/110 y propagación a vistas y contratos
+
+- **Tipo:** ampliación de la Iteración IV (CON-5: *More decisions and improvements*) con destino **Fase 1**; nueva decisión MADR + actualización de drivers, vistas, unidades, contratos y registros.
+- **Auditoría previa (SPEC-001 Regla 2 / directiva 1, Paso 0):** se detectó que `drivers/design-purpose.md` §5 excluía «chat» del scope de **Fase 0** y que `constraints.md` prohíbe plataformas gestionadas con presupuesto ~$80/mes. **Se advirtió el conflicto antes de documentar** y se resolvió **sin revocar** la decisión: el Asistente Virtual se provee en **Fase 1**, con Fase 0 intacta. Se reutiliza FR-6 (deep-link) para la derivación, se mantiene NATS en una sola arista (ADR-103) y no se añade un cuarto desplegable (ADR-101/102).
+- **Artefactos nuevos:**
+  - `adrs/adr-109-asistente-virtual.md` — módulo `assistant/` en Pater, puerto `IntentClassifier` (LLM con ACL + redacción de PII; fallback determinista), streaming SSE/htmx; 4 alternativas evaluadas.
+  - `adrs/adr-110-derivacion-y-estado-asistente.md` — agregado `AssistanceCase` en Filius, `context_token` en Redis, deep-link a la agencia preferida y eventos `assistance.*`; 4 alternativas evaluadas.
+- **Drivers actualizados:** `drivers/requerimientos.md` (FR-10, FR-11), `drivers/atributos.md` (QA-16, QA-17), `drivers/design-purpose.md` (capacidad, actor agencia, alcance Fase 1, métricas), `drivers/constraints.md` (YAGNI Fase 0 + disparador Fase 1).
+- **Vistas y detalle actualizados:** `architecture/vista_modulos.md`, `vista_cyc.md` (escenario 6), `vista_despliegue.md`; `units/01..05` (nuevos módulos, caso, evento `assistance.>`); `README.md` raíz y `trinity/README.md`.
+- **Contratos e infra actualizados:** `fase_0/docs/api/openapi.yaml` (`/assistant/*` + `/internal/assistance/*`, schemas, `preferred_agency_id`), `fase_0/docs/events/events.yaml` (2 eventos + stream `ASSISTANCE`), `trinity/data/modelo-datos.md` (ERD, DDL y state machine de `AssistanceCase`), `fase_0/deploy/postgres/init.sql`, `nginx/conf.d/default.conf` (SSE del chat), `.env.example` (flags Fase 1).
+- **Gobernanza actualizada:** `registers/deuda-arquitectonica.md` (**DT-06**: proveedor LLM), `registers/transiciones.md` (criterio Fase 1), `ops/operaciones.md` (métricas/alertas/privacidad/runbook), `testing/estrategia-testing.md` (LLM fake, redacción de PII, fallback).
+- **Trazabilidad:** SPEC-001 Regla 2, Regla 3, Regla 4 (≥ 3 opciones), Paso 8; Bass ch.19/20/22/23; Keeling (HART, ASRs, decision matrix, ADRs); Newman ch.2/4/6/14 (coupling, estilos de comunicación, sagas, BFF).
+- **Estado:** documentación lista; implementación del prototipo (CON-4) y activación del feature flag pendientes.
+
+---
+
 ## Futuro (borrador — anotar al concretar)
 
 - Extracción de **Notification** como módulo de Spiritus (Fase 1) → actualizar `units/04` y `05`.

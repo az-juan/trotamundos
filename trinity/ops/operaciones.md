@@ -22,6 +22,10 @@
 | `email_parse_total` | counter | spiritus | por resultado (matched/no_match/failed) |
 | `email_parse_duration_seconds` | histogram | spiritus | duración del parseo |
 | `idempotency_hits_total` | counter | todas | reentregas deduplicadas |
+| `assistant_first_token_seconds` | histogram | pater | latencia hasta el primer token del chat (QA-16, Fase 1) |
+| `assistant_fallback_total` | counter | pater | respuestas con clasificador determinista (ADR-109) |
+| `assistance_cases_total` | counter | filius | casos por `reason`/`status`/`severity` (ADR-110) |
+| `assistance_tier1_resolution_ratio` | gauge | spiritus | ratio de resolución sin agencia (QA-17, desde `assistance.*`) |
 
 ### Tracing
 - OpenTelemetry Go SDK → OTLP (Fase 1: Grafana Tempo/Jaeger).
@@ -32,10 +36,12 @@
 - Respuesta web **p95 ≤ 800 ms** (QA-6).
 - FCP móvil **< 1.4 s** (QA-7).
 - Refresco de terceros **< 5 min** (QA-5).
+- Asistente Virtual (Fase 1): primer token **p95 < 2 s** (QA-16) y resolución de primer nivel **≥ 70 %** (QA-17).
 
 ### Alertas (3 a.m. test, EEMUA)
 - Cada alerta debe ser: relevante, única, oportuna, priorizada, comprensible, diagnóstica, advisory, enfocada.
 - Alertas iniciales: caída de unidad (healthz), lag de consumer > 60 s, tasa de no-match > 20%, breaker abierto > 5 min.
+- Alertas Fase 1 (3 a.m. test): `assistant_first_token_seconds` p95 > 2 s sostenido 10 min, `assistant_fallback_total` > 20 % de las sesiones, caída de `assistance_tier1_resolution_ratio` por debajo del 70 %.
 
 ## 2. Backup y restore
 
@@ -54,6 +60,7 @@
 - **Retención OLTP:** viajes archivados se mantienen 24 meses; luego se purgan (job mensual).
 - **Retención OLAP (ClickHouse):** 24 meses de eventos crudos; agregados indefinidos.
 - **Derecho de borrado (GDPR-like):** endpoint `DELETE /me/data` (Fase 2) que anonimiza todas las tablas del usuario en los 3 esquemas.
+- **Asistente Virtual (Fase 1, ADR-109/110):** la conversación **no se persiste**; sesión y `context_token` viven en Redis con TTL (30 min / 15 min, un solo uso). El LLM recibe solo contexto **redactado** y previo consentimiento explícito; `filius.assistance_cases` guarda solo identificadores/métricas, nunca texto del chat.
 
 ## 4. Seguridad (resumen operativo)
 
@@ -73,9 +80,10 @@
 | NATS caído | Filius↔Spiritus se desacoplan; eventos se acumulan en JetStream (si el nodo vuelve); si el nodo se perdió, restaurar desde backup |
 | PG caído | Todas las unidades fallan; esperar restore managed (RTO < 30 min) |
 | Spiritus caído | Pater y Filius siguen operando; insights desactualizados; correos se acumulan en la bandeja (re-scan al volver) |
+| LLM externo caído (Fase 1) | el circuit breaker conmuta al clasificador determinista; se responde `ASSISTANT_DEGRADED` y se ofrece derivación a la agencia; no afecta a Filius/Spiritus |
 
 ## 6. Fases
 
 - **Fase 0:** este documento (monitoring básico + backups managed + runbook manual).
-- **Fase 1:** Loki/Grafana, alertas automáticas, Redis/NATS managed, ClickHouse backup a Spaces.
+- **Fase 1:** Loki/Grafana, alertas automáticas, Redis/NATS managed, ClickHouse backup a Spaces, **Asistente Virtual** (métricas QA-16/QA-17, LLM con presupuesto vigilado).
 - **Fase 2:** K3s + ArgoCD (GitOps), Vault, OIDC, control de acceso por rol de DB, GDPR endpoint.

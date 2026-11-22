@@ -50,13 +50,15 @@ trotamundos/
 │   │       ├── gateway/          # Chi + oapi-codegen (router, auth, rate limit, proxy)
 │   │       ├── web-bff/          # templ + htmx + Tailwind (HTML)
 │   │       ├── mobile-bff/       # Chi (JSON) para app nativa
+│   │       ├── assistant/        # Asistente Virtual (Fase 1, ADR-109)
 │   │       └── domain/…          # (hexagonal, ADR-002 inalterado)
 │   ├── filius/                   # module github.com/trotamundos/filius
 │   │   ├── go.mod
 │   │   ├── cmd/filius/main.go    # deployable: Itinerary + Integration
 │   │   └── internal/
 │   │       ├── itinerary/        # hexagonal
-│   │       └── integration/      # hexagonal
+│   │       ├── integration/      # hexagonal
+│   │       └── assistance/       # casos de asistencia (Fase 1, ADR-110)
 │   └── spiritus/                 # module github.com/trotamundos/spiritus
 │       ├── go.mod
 │       ├── cmd/spiritus/main.go  # deployable: Email Ingest + Analytics

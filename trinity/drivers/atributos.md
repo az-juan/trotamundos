@@ -30,3 +30,7 @@
 ---
 ## Testeabilidad:
 - QA-12: Requisito de alta trazabilidad y facilidad para evaluaciones futuras.
+---
+## Asistencia (Fase 1):
+- QA-16: Primera respuesta conversacional del Asistente Virtual en **p95 < 2 s** (web y móvil), sin degradar QA-6 (≤ 800 ms) ni QA-7 (FCP < 1.4 s); respuesta por streaming, sin bloquear el render inicial (ADR-109).
+- QA-17: Al menos el **70 % de las intenciones** resueltas por el Asistente Virtual sin intervención de la agencia, medible desde los eventos `assistance.*` (ADR-110).

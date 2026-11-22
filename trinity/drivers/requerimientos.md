@@ -9,3 +9,5 @@
 - FR-7: El sistema deberá recompilar datos analíticos de los viajes de sus usuarios.
 - FR-8: El usuario debe poder compartir su itinerario a través de redes sociales.
 - FR-9: El sistema debe monetizar la plataforma a partir de la analítica de datos agregados de viajes (tendencias de destinos, demanda y patrones de cancelación), ofreciéndola como insight comercial a terceros (aerolíneas, hoteles, destinos turísticos).
+- FR-10: El sistema debe ofrecer un **Asistente Virtual** (Fase 1) como primer nivel de soporte interactivo para gestionar reprogramaciones guiadas, consultas de estado e incidencias menores (ADR-109).
+- FR-11: El Asistente Virtual debe delegar únicamente los casos complejos a la **agencia de viajes preferida del usuario**, con contexto mínimo y trazable, reutilizando el deep-link de FR-6 (ADR-110).

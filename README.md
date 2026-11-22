@@ -21,7 +21,7 @@ Toda la documentación de la arquitectura vive en [`trinity/`](./trinity/):
 | **Vistas arquitectónicas** | [`trinity/architecture/`](./trinity/architecture/) | Módulos (código) · Componentes y conectores (runtime) · Despliegue |
 | **Detalle por unidad** | [`trinity/units/`](./trinity/units/) | Pater · Filius · Spiritus + catálogo de eventos |
 | **Contratos y datos** | [`trinity/README.md`](./trinity/README.md) | OpenAPI 3.1 · eventos JSON Schema · modelo de datos · dev · testing · ops |
-| **Decisiones (ADR)** | [`trinity/adrs/`](./trinity/adrs/) | ADR-101..108 (Trinidad + Hardening Fase 0) + ADR-001..014 (heredados/adaptados) |
+| **Decisiones (ADR)** | [`trinity/adrs/`](./trinity/adrs/) | ADR-101..110 (Trinidad, Hardening Fase 0 y Asistente Virtual Fase 1) + ADR-001..014 (heredados/adaptados) |
 | **Drivers** | [`trinity/drivers/`](./trinity/drivers/) | Requerimientos, atributos de calidad, constraints, concerns |
 | **Registro de evolución** | [`trinity/registers/`](./trinity/registers/) | Changelog, deuda arquitectónica, criterios de transición |
 | **Especificación rectora** | [`skills/SPEC_ARCHITECTURE.md`](./skills/SPEC_ARCHITECTURE.md) | Marco ADD 3.0 + SDD |
@@ -32,5 +32,9 @@ Conserva el escalado y aislamiento por perfil de carga de los microservicios (ba
 con **solo 3 deployables** en vez de 7: sin service mesh, sin Kubernetes en Fase 0, un solo Droplet con
 Docker Compose. Se respeta la sobriedad operativa exigida por las restricciones del proyecto (equipo
 pequeño, poco tiempo, presupuesto limitado) y se preserva la vía de extracción de módulo a servicio.
+
+## Capacidad Fase 1: Asistente Virtual
+
+El **Asistente Virtual** ([ADR-109](./trinity/adrs/adr-109-asistente-virtual.md), [ADR-110](./trinity/adrs/adr-110-derivacion-y-estado-asistente.md)) es soporte de primer nivel para reprogramaciones guiadas, consultas de estado e incidencias menores; los casos complejos se derivan a la **agencia preferida** del usuario. Es un módulo de **Pater** (`assistant/`) con un agregado en **Filius** (`assistance/`): **no añade deployables ni aristas**, y su activación está prevista para **Fase 1** (Fase 0 se mantiene sin chat, según `trinity/drivers/design-purpose.md`).
 
 ![Pater-Filius-Spiritus](./images/Pater-Spiritus-Filius.png)

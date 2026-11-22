@@ -20,6 +20,8 @@ graph LR
     %% Externos
     FILIUS <-->|"REST resiliente (en proceso hacia out)"| EXT["Aerolíneas · Hoteles · Rentadoras"]
     SPIRITUS <-->|"OAuth2 / IMAP"| MAIL["Gmail · IMAP"]
+    PATER <-->|"ACL + redaccion PII (Fase 1)"| LLM["Proveedor LLM"]
+    PATER -->|"deep-link B2B (FR-6, Fase 1)"| AG["Agencia preferida"]
 
     %% Datos
     FILIUS -->|"SQL (esquema filius)"| PG[(PostgreSQL<br/>OLTP · compartido)]
@@ -32,6 +34,8 @@ graph LR
     style FILIUS fill:#1a3a2a,stroke:#4caf50,color:#fff
     style SPIRITUS fill:#2a1a3a,stroke:#ba68c8,color:#fff
     style NATS fill:#1a2a3a,stroke:#2196f3,color:#fff
+    style LLM fill:#3a2a1a,stroke:#ff9800,color:#fff
+    style AG fill:#3a1a1a,stroke:#f44336,color:#fff
 ```
 
 ## Propósito de esta vista (component-and-connector, Bass ch.1/22)
@@ -159,6 +163,39 @@ sequenceDiagram
     Note over AN,OLAP: No pasa por Filius ni por el esquema filius → la analítica no degrada el SLA de 800 ms (QA-15, ADR-107).
 ```
 
+## Escenario 6 — Asistente Virtual: consulta, derivación y seguimiento (Fase 1)
+
+```mermaid
+sequenceDiagram
+    participant U as Viajero (web/movil)
+    participant GW as Pater · gateway
+    participant AS as Pater · assistant
+    participant FI as Filius · assistance/itinerary
+    participant N as NATS JetStream
+    participant SP as Spiritus · analytics
+    participant AG as Agencia preferida (FR-6)
+    U->>GW: POST /assistant/messages (JWT + X-Correlation-ID)
+    GW->>AS: validar JWT + rate limit (en proceso)
+    AS->>AS: IntentClassifier (LLM con ACL/PII redactada → fallback reglas)
+    alt consulta de estado / incidencia menor
+        AS->>FI: GET /trips/{id} o /bookings/{id} (REST, timeout)
+        FI-->>AS: estado canonico (cache → PG esquema filius)
+        AS-->>U: SSE/htmx: respuesta en streaming (p95 < 2 s, QA-16)
+    else reprogramacion guiada
+        AS-->>U: deep-link al proveedor (FR-6) + pasos
+        FI-->>N: booking.confirmed (cuando el proveedor confirma)
+    else caso complejo → agencia
+        AS->>FI: POST /internal/assistance/cases (REST)
+        FI->>FI: tx local: filius.assistance_cases (open) + token Redis TTL 15 min
+        FI->>N: assistance.handoff_requested
+        N->>SP: ingesta → metrica de resolucion (QA-17)
+        AS-->>U: deep-link a agencia con context_token (un solo uso)
+        AG->>FI: consulta contexto con token → caso handed_off
+        FI->>N: assistance.resolved → SP cierra la metrica
+    end
+    Note over AS,FI: Sin cuarta arista: Pater solo REST; NATS sigue solo Filius↔Spiritus (ADR-103).
+```
+
 ## Leyenda
 
 - **Flecha sólida** = llamada síncrona (request-response, con timeout). · **Flecha punteada** = evento
@@ -168,3 +205,5 @@ sequenceDiagram
   email-ingest↔analytics (Spiritus) se comunican por **llamada en proceso**. Solo las 3 aristas del
   triángulo cruzan procesos.
 - Ver detalle por unidad en `adrs/adr-102` (módulos) y `adrs/adr-103` (conectores).
+- **Asistente Virtual (Fase 1, ADR-109/110): no añade conectores.** El LLM y la agencia son actores
+  externos; Pater solo habla REST con Filius y Filius publica `assistance.*` en la arista NATS ya existente.

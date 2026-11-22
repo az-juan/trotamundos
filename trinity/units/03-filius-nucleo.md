@@ -4,7 +4,7 @@
 > **Perfil de carga**: per-request, I/O (SLA ≤ 800 ms, QA-6).
 > **ADR de origen**: 102 (unidad), 103 (aristas REST con Pater y NATS con Spiritus). Complementa: 104 (esquema PG), 014 (JWT RS256 para autenticación).
 > **Colapsa** los deployables de `main`: Itinerary (ADR-001) + Integration (ADR-007), ahora **módulos
-> internos en proceso** dentro de `units/filius`.
+> internos en proceso** dentro de `units/filius`. En **Fase 1** se añade `assistance/` (ADR-110).
 
 ## 1. Responsabilidad
 
@@ -12,12 +12,16 @@ Filius es el **Núcleo** transaccional del sistema. Posee la verdad de las reser
 encargado de enriquecerlas con los proveedores externos.
 
 - **itinerary/** — el módulo central (bounded context: Usuario/Preferencias, Viaje, Reserva, Viajero, Ciclo de Vida):
-  - **Usuarios y Preferencias (`filius.users`, ADR-106)**: verificación de credenciales vía `POST /internal/auth/verify` para Pater y gestión de preferencias del viajero (`preferences JSONB`: `locale`, `currency`, `gps_radius_km` y preferencias de viaje).
+  - **Usuarios y Preferencias (`filius.users`, ADR-106)**: verificación de credenciales vía `POST /internal/auth/verify` para Pater y gestión de preferencias del viajero (`preferences JSONB`: `locale`, `currency`, `gps_radius_km`, `preferred_agency_id` —agencia elegida para derivaciones, ADR-110— y preferencias de viaje).
   - **Viajes (Trip)**: agrupación de reservas y viajeros (FR-5: agrupar por viaje, auto-archivar al finalizar).
   - **Reservas (Booking)**: hospedaje y transporte, con state machine de ciclo de vida, coordenadas opcionales (`lat`, `lon` para `GET /trips/nearby`, QA-13) y segmentos tipados en `details JSONB`.
   - **Viajeros (Traveler)**; **compartir itinerario** con permisos de visualización (QA-10, FR-8);
     **deep-linking** a apps de terceros (FR-6).
   - Publica hechos ricos `booking.confirmed` / `trip.*` (con retry en memoria `Exponential Backoff`, ADR-108); consume `booking.discovered` (crea la reserva desde el correo).
+- **assistance/** (Fase 1, ADR-110) — agregado **`AssistanceCase`** con estados
+  `open → handed_off → resolved → closed` (`expired` si vence el token). Lo crea Pater por REST; el
+  módulo publica `assistance.handoff_requested` / `assistance.resolved` en la arista NATS existente y
+  emite el `context_token` opaco en Redis (TTL 15 min, un solo uso) para la derivación vía FR-6.
 - **integration/** — adaptación a proveedores heterogéneos (aerolíneas, hoteles, rentadoras):
   - Contratos de proveedor (REST/NDC), **webhooks** firmados (HMAC), y la **cadena de resiliencia**
     (circuit breaker → retry → rate limit, ADR-007).
@@ -41,11 +45,16 @@ encargado de enriquecerlas con los proveedores externos.
 
 ```mermaid
 graph TB
-    subgraph "units/filius/internal/ — itinerary · integration (llamada en proceso)"
+    subgraph "units/filius/internal/ — itinerary · integration · assistance (Fase 1) (llamada en proceso)"
         subgraph "itinerary/"
             ITIN_UC["usecase: CreateTrip · AddBooking · RegisterDiscovered · ArchiveCompletedTrips · ShareItinerary"]
             ITIN_DOM["domain: Trip · Booking (state machine) · Traveler · ItineraryShare"]
             ITIN_OUT["adapters/out: pgx → PG(esquema filius) · go-redis · nats producer"]
+        end
+        subgraph "assistance/ (Fase 1)"
+            AS_UC["usecase: OpenCase · HandoffToAgency · ResolveCase · ExpireToken"]
+            AS_DOM["domain: AssistanceCase (state machine) · ContextToken"]
+            AS_OUT["adapters/out: pgx → PG(esquema filius) · redis · nats producer"]
         end
         subgraph "integration/"
             INT_UC["usecase: FetchProviderDetails · HandleWebhook · MapToCanonical"]
@@ -53,6 +62,8 @@ graph TB
         end
         ITIN_UC --> ITIN_DOM
         ITIN_UC --> ITIN_OUT
+        AS_UC --> AS_DOM
+        AS_UC --> AS_OUT
         INT_UC --> INT_OUT
         INT_UC -. "llamada en proceso (itinerary↔integration)" .-> ITIN_UC
     end
@@ -66,7 +77,9 @@ graph TB
 
 ## 4. Interacción con las otras unidades (aristas del triángulo)
 
-- **Pater → Filius (REST)**: Pater lee/escribe a través de los endpoints de Itinerary.
+- **Pater → Filius (REST)**: Pater lee/escribe a través de los endpoints de Itinerary y, en Fase 1,
+  crea/consulta casos con `POST /internal/assistance/cases` y `GET /internal/assistance/cases/{id}`
+  (JWT interno, `X-Correlation-ID`, timeout; mismo esquema de `POST /internal/auth/verify`).
 - **Filius → Spiritus (NATS JetStream, async)**: Filius **publica** hechos ricos (`booking.confirmed`,
   `trip.disrupted`, `booking.cancelled`); Spiritus los **consume** para analítica y re-ingesta. A la
   inversa, Spiritus publica `booking.discovered` que Itinerary consume. Es la **única** arista que usa
@@ -99,6 +112,14 @@ sequenceDiagram
 | QA-9/QA-4 (integración heterogénea) | adaptadores por proveedor + cadena de resiliencia (ADR-007) |
 | QA-10 (compartir con permisos) | `ItineraryShare` con `ShareToken` y permisos de visualización |
 | QA-11 (nuevos medios) | nuevo adaptador de proveedor sin tocar dominio (hexagonal) |
+| FR-10/FR-11 + QA-17 (Fase 1) | `assistance/` posee `AssistanceCase`; publica `assistance.*` y expone el `context_token` para la agencia |
+
+## 7. Casos de asistencia (Fase 1 — ADR-110)
+
+- **DDL:** `filius.assistance_cases` (ver `../data/modelo-datos.md`); preferencia `preferred_agency_id` en `filius.users.preferences`.
+- **Token de contexto:** ULID opaco en Redis con TTL 15 min y consumo único; nunca contiene la transcripción del chat.
+- **Saga local:** abrir caso (tx ACID en `filius`) → publicar `assistance.handoff_requested` con retry en memoria (ADR-108) → deep-link (FR-6) → `assistance.resolved`. Sin 2PC (Newman ch.6).
+- **Idempotencia:** `POST /internal/assistance/cases` acepta `Idempotency-Key`; el `correlation-id` se propaga al evento.
 
 ## 6. Contratos de proveedores (módulo `integration/`)
 

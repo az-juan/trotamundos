@@ -14,7 +14,8 @@ microservicios.
 | 02 | [02-pater-facade.md](./02-pater-facade.md) | Unidad **Pater** (el Rostro) — Gateway · Web BFF · Mobile BFF | ADR-102, ADR-103 |
 | 03 | [03-filius-nucleo.md](./03-filius-nucleo.md) | Unidad **Filius** (el Núcleo) — Itinerary · Integration | ADR-102, ADR-103 |
 | 04 | [04-spiritus-mente.md](./04-spiritus-mente.md) | Unidad **Spiritus** (la Mente) — Email Ingest · Analytics | ADR-102, ADR-103 |
-| 05 | [05-catalogo-eventos.md](./05-catalogo-eventos.md) | Catálogo de eventos NATS JetStream — **solo la arista Filius↔Spiritus** | ADR-103, ADR-104 |
+| 05 | [05-catalogo-eventos.md](./05-catalogo-eventos.md) | Catálogo de eventos NATS JetStream — **solo la arista Filius↔Spiritus** (incluye `assistance.>` en Fase 1) | ADR-103, ADR-104, ADR-110 |
+| 06 | [ADR-109](../adrs/adr-109-asistente-virtual.md) · [ADR-110](../adrs/adr-110-derivacion-y-estado-asistente.md) | **Asistente Virtual (Fase 1):** `assistant/` en Pater + `assistance/` en Filius, derivación a agencia preferida | ADR-109, ADR-110 |
 
 ## Las tres unidades del sistema (Fase 0)
 

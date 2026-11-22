@@ -4,7 +4,8 @@
 > **Perfil de carga**: per-request, baja latencia (web ≤ 800 ms, QA-6; FCP móvil < 1.4 s, QA-7).
 > **ADR de origen**: 102 (unidad), 103 (arista REST con Filius). Complementa: 105 (despliegue), 014 (JWT, emisión/validación).
 > **Colapsa** los deployables de `main`: API Gateway (ADR-006) + Web BFF (ADR-009) + Mobile BFF (ADR-013),
-> ahora **módulos internos en proceso** dentro de `units/pater`.
+> ahora **módulos internos en proceso** dentro de `units/pater`. En **Fase 1** se añade `assistant/`
+> (Asistente Virtual, ADR-109/110) **sin nuevo deployable ni nueva arista**.
 
 ## 1. Responsabilidad
 
@@ -19,6 +20,9 @@ No contiene dominio operacional; delega lecturas/escrituras en **Filius** por RE
   (arista Spiritus→Pater). i18n por región.
 - **mobile-bff/** — agregación **JSON** para las apps nativas (Swift/Kotlin) con Chi (ADR-013):
   *one BFF per experience*. Mismos contratos OpenAPI que la web, payload adaptado a móvil.
+- **assistant/** (Fase 1, ADR-109) — Asistente Virtual: clasificación de intenciones, consultas de
+  estado, reprogramación guiada y derivación de casos complejos. Usa `FiliusClient` (REST) y el
+  puerto `IntentClassifier` (LLM con ACL/redacción de PII, con fallback determinista).
 
 ## 2. Tecnologías
 
@@ -39,11 +43,11 @@ No contiene dominio operacional; delega lecturas/escrituras en **Filius** por RE
 
 ```mermaid
 graph TB
-    subgraph "units/pater/internal/ — gateway · web-bff · mobile-bff (en proceso)"
+    subgraph "units/pater/internal/ — gateway · web-bff · mobile-bff · assistant (Fase 1) (en proceso)"
         IN["Adaptadores de entrada<br/>• HTTP (chi): gateway, web-bff, mobile-bff<br/>• SSE publisher (notificaciones)"]
         PORTSIN["Puertos (entrada)<br/>• APIPort (queries)"]
-        UC["Use Cases<br/>• Authenticate<br/>• RateLimit<br/>• RenderTripPage / RenderInsights<br/>• AggregateMobileTrip"]
-        PORTSOUT["Puertos (salida)<br/>• FiliusClient (REST)<br/>• ReadModelClient (Spiritus)<br/>• CacheStore"]
+        • Authenticate<br/>• RateLimit<br/>• RenderTripPage / RenderInsights<br/>• AggregateMobileTrip<br/>• HandleAssistantMessage",
+        • FiliusClient (REST)<br/>• ReadModelClient (Spiritus)<br/>• CacheStore<br/>• IntentClassifier (LLM/Reglas)<br/>• SessionStore (Redis TTL)",
         OUT["Adaptadores de salida<br/>• chi (HTTP out)<br/>• go-redis → Redis<br/>• http (REST a Filius, timeout)<br/>• SSE (a web-bff)"]
         IN --> PORTSIN --> UC
         UC --> PORTSOUT
@@ -89,6 +93,8 @@ sequenceDiagram
 | QA-9 (acceso seguro) | validación JWT RS256 en el gateway; secretos por instancia |
 | QA-12 (trazabilidad) | `X-Correlation-ID` inyectado y propagado por OTel a Filius/Spiritus |
 | QA-14 (canales web/móvil) | web-bff (HTML/htmx) y mobile-bff (JSON) como experiencias separadas (ADR-013) |
+| QA-16 (respuesta < 2 s, Fase 1) | streaming por SSE/htmx; `IntentClassifier` con timeout + fallback determinista; sin bloquear el render |
+| QA-17 (resolución ≥ 70 %, Fase 1) | intenciones resueltas localmente frente a derivaciones; medido por `assistance.*` en Spiritus |
 
 ## 6. Flujo de autenticación (JWT RS256, Fase 0)
 
@@ -132,6 +138,22 @@ Implementado en el **Mobile BFF** (`mobile-bff/`):
 - **Privacidad:** la posición no se persiste; solo se usa en la respuesta. No se envía a terceros.
 - **Deep-linking (FR-6):** el Mobile BFF genera URLs de deep-link hacia apps de terceros (aerolíneas, hoteles) con el `provider_ref`.
 
-> Vistas complementarias: `../architecture/vista_cyc.md` (escenarios 2 y 3 en runtime) y
+## 10. Asistente Virtual (Fase 1 — ADR-109/110)
+
+- **Contrato:** `POST /assistant/messages`, `GET /assistant/stream` (SSE), `GET /assistant/cases/{id}`;
+  mismo payload JSON para `mobile-bff`, fragmentos htmx para `web-bff`.
+- **Flujo:** el Gateway valida JWT RS256, aplica rate limit e inyecta `X-Correlation-ID`; `assistant/`
+  clasifica la intención y, para **consultas de estado**, llama a Filius por REST con timeout.
+- **Reprogramación:** el asistente **no escribe en el proveedor**; entrega un *deep-link* (FR-6) y
+  confirma el nuevo estado cuando llega `booking.confirmed` desde Filius.
+- **Caso complejo:** `POST /internal/assistance/cases` a Filius + *deep-link* a la agencia preferida
+  con `context_token` opaco (Redis, TTL 15 min, un solo uso). Ver `03-filius-nucleo.md` §7.
+- **Privacidad:** la sesión de chat y el contexto enviado al LLM son **redactados** y no se persisten
+  (Redis con TTL corto); el proveedor externo solo recibe lo mínimo y nunca credenciales ni PII sin
+  consentimiento (QA-9). Si el LLM falla: circuit breaker → clasificador de reglas → opción de derivación.
+- **Errores:** mismos códigos del envelope (`VALIDATION_ERROR`, `RATE_LIMITED`, `UPSTREAM_UNAVAILABLE`);
+  añade `ASSISTANT_DEGRADED` cuando se responde con el fallback determinista.
+
+> Vistas complementarias: `../architecture/vista_cyc.md` (escenarios 2, 3 y 6 en runtime) y
 > `../architecture/vista_despliegue.md` (contenedor `pater` tras Nginx). Detalle de eventos en
 > [05-catalogo-eventos.md](./05-catalogo-eventos.md).

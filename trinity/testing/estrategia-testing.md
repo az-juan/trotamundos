@@ -16,7 +16,7 @@
 
 - **Unitarios (×10):** dominio puro, sin infra. La ventaja del hexagonal: `domain` y `usecase` se testean sin PG/Redis/NATS. Framework: `testing` stdlib + `testify/require` + `go-cmp` para diffs.
 - **De servicio / contrato (×1):** puertos con adaptadores fake (in-memory repo, fake publisher). **Consumer-Driven Contracts (Pact)** entre Pater (Gateway/BFF) y Filius, y entre consumidores de eventos.
-- **E2E (pocos):** `docker compose` con las 3 unidades + DBs efímeras. Solo flujos críticos (login → ver viaje → disrupción → notificación).
+- **E2E (pocos):** `docker compose` con las 3 unidades + DBs efímeras. Solo flujos críticos (login → ver viaje → disrupción → notificación). En Fase 1 se añade: consulta de estado → derivación a agencia → `assistance.resolved`.
 - **En producción:** smoke tests + verificación de SLO (Newman: invertir en MTTR, no en más tests pre-prod).
 
 ## 2. Qué se testea por unidad
@@ -26,6 +26,7 @@
 | Pater | agregación BFF, rate limit, render | OpenAPI (gateway) | REST a Filius (fake) |
 | Filius | state machine Booking, use cases | eventos (JSON Schema) | PG (testcontainers), NATS |
 | Spiritus | parseo de correo (regex→template), dedup | eventos (JSON Schema) | IMAP mock, ClickHouse (Fase 1) |
+| Pater · assistant (Fase 1) | `IntentClassifier` (fake), redacción de PII, `AssistanceCase` state machine | OpenAPI `/assistant/*` + Pact Pater→Filius | LLM **fake** (nunca live en CI), Redis efímero |
 
 ## 3. Tests de contrato (SDD)
 
@@ -50,7 +51,15 @@
 - Fixtures: `testdata/` junto al paquete; golden files con `-update` flag.
 - No mocks de frameworks pesados: usar fakes manuales (Newman: stubs > mocks para claridad).
 
-## 7. Comandos
+## 7. Asistente Virtual (Fase 1, ADR-109/110)
+
+- **Nunca llama al LLM real en CI:** el puerto `IntentClassifier` se inyecta con un fake; los fixtures cubren `status_query`, `reschedule_guidance`, `minor_issue` y `complex_handoff`.
+- **Redacción de PII:** test unitario que verifica que el payload enviado al clasificador no contenga nombres, documentos ni correos.
+- **Fallback:** simular error/tiempo de espera del adaptador LLM y comprobar `ASSISTANT_DEGRADED` + derivación disponible.
+- **Contratos:** el OpenAPI de `/assistant/*` y `/internal/assistance/*` se valida con `schemathesis`/`prism`; los eventos `assistance.*` contra `events.yaml`.
+- **Métricas QA-16/QA-17:** test de agregación con eventos sintéticos, comprobando que el ratio ignora textos y solo usa `tier1_resolved`.
+
+## 8. Comandos
 
 ```bash
 # Unitarios

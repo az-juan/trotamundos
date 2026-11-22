@@ -20,6 +20,7 @@ bursty de CPU no degrade el SLA de 800 ms (QA-15, CQRS).
 - **analytics/** — ingestión **batch** detrás del puerto `AnalyticsRepository` (OLAP, dueño exclusivo de Spiritus, ADR-107):
   - **Polimorfismo por fase (ADR-107):** en **Fase 0** (`SPIRITUS_ANALYTICS_DRIVER=postgres`) inyecta el adaptador `PostgresAnalyticsRepo` sobre `spiritus.analytics_events` y `spiritus.insight_aggregates` (respetando el presupuesto de ~$80/mes); en **Fase 1** (`SPIRITUS_ANALYTICS_DRIVER=clickhouse`) inyecta `ClickHouseAnalyticsRepo` hacia el 2.º Droplet de ClickHouse sin tocar dominio ni casos de uso.
   - Consume **todos** los eventos de dominio (`booking.>`, `trip.>`) con el historial rico por `user_id`, `type`, `destination` y `segments`, y los pre-agrega.
+  - **Fase 1 (ADR-110):** consume `assistance.>` (`assistance.handoff_requested`, `assistance.resolved`) para calcular la tasa de resolución de primer nivel (QA-17) y el tiempo de derivación, sin tocar el OLTP.
   - Sirve el **read-model** de insights a Pater (dashboard, FR-7) y a partners anónimos (FR-9, monetización).
   - Expone métricas de lag de consumidor y tasa de "no matcheado" del parser.
 
@@ -66,7 +67,7 @@ graph TB
 ## 4. Interacción con las otras unidades (aristas del triángulo)
 
 - **Filius ↔ Spiritus (NATS JetStream, async)**: la única arista con NATS. Spiritus **consume**
-  `booking.*`/`trip.*` de Filius (para analítica) y **publica** `booking.discovered` que Itinerary
+  `booking.*`/`trip.*`/`assistance.*` de Filius (para analítica) y **publica** `booking.discovered` que Itinerary
   consume. Invertir la responsabilidad: emisores publican hechos ricos, consumidores reaccionan (Newman ch.4).
 - **Spiritus → Pater (read-model / SSE)**: el analytics sirve el read-model de insights a Pater (sin
   pasar por Filius/PostgreSQL, QA-15) y empuja notificaciones por SSE para disrupciones en tiempo casi real.
@@ -97,6 +98,7 @@ sequenceDiagram
 | QA-15 (analítica sin degradar OLTP) | ClickHouse exclusivo + read-model servido a Pater, fuera del OLTP |
 | FR-7 (recopilación analítica) | pre-agregados en ClickHouse (tendencias, cohortes) |
 | FR-9 (monetización) | insights agregados/anónimos a partners vía read-model (datos anónimos, QA-9) |
+| QA-17 (Fase 1) | `assistance.>` → agregado `assistance_resolution_rate` en el read-model; nunca PII de la conversación |
 
 > Vistas complementarias: `../architecture/vista_cyc.md` (escenario 5, dashboard de insights) y
 > `../architecture/vista_despliegue.md` (contenedor `spiritus` + Droplet 2 de ClickHouse). Catálogo de

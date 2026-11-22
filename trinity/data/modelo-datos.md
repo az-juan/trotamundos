@@ -20,6 +20,7 @@ erDiagram
     TRIP ||--o{ BOOKING : "agrupa"
     TRIP ||--o{ TRAVELER : "incluye"
     TRIP ||--o{ ITINERARY_SHARE : "comparte"
+    USER ||--o{ ASSISTANCE_CASE : "deriva"
     BOOKING }o--|| TRIP : "pertenece a"
     MAILBOX ||--o{ INGESTED_EMAIL : "contiene"
 
@@ -69,6 +70,18 @@ erDiagram
         text permission
         timestamptz expires_at
         timestamptz created_at
+    }
+    ASSISTANCE_CASE {
+        uuid id PK
+        uuid user_id FK
+        uuid trip_id FK
+        uuid booking_id FK
+        text status
+        text reason
+        text severity
+        text agency_id
+        timestamptz created_at
+        timestamptz resolved_at
     }
     MAILBOX {
         uuid id PK
@@ -144,6 +157,7 @@ CREATE TABLE filius.trips (
     archived_at TIMESTAMPTZ
 );
 CREATE INDEX idx_trips_user_status ON filius.trips (user_id, status);
+-- Nota Fase 1 (ADR-110): las preferencias `filius.users.preferences` incluyen `preferred_agency_id`.
 
 CREATE TABLE filius.bookings (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -181,6 +195,23 @@ CREATE TABLE filius.itinerary_shares (
     expires_at  TIMESTAMPTZ,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Fase 1 (ADR-110): caso de asistencia — dueno Filius (esquema filius)
+CREATE TABLE filius.assistance_cases (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID NOT NULL REFERENCES filius.users(id) ON DELETE CASCADE,
+    trip_id      UUID REFERENCES filius.trips(id) ON DELETE SET NULL,
+    booking_id   UUID REFERENCES filius.bookings(id) ON DELETE SET NULL,
+    status       TEXT NOT NULL DEFAULT 'open'
+                 CHECK (status IN ('open','handed_off','resolved','closed','expired')),
+    reason       TEXT NOT NULL CHECK (reason IN ('complex_request','reschedule_failed','complaint','other')),
+    severity     TEXT NOT NULL CHECK (severity IN ('low','medium','high')),
+    agency_id    TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    resolved_at  TIMESTAMPTZ
+);
+CREATE INDEX idx_assistance_cases_user_status ON filius.assistance_cases (user_id, status);
+-- El context_token opaco NO se persiste en PG: vive solo en Redis (TTL 15 min, un solo uso).
 ```
 
 > **Estructura esperada de `filius.bookings.details` (JSONB):** incluye `destination` (IATA/ciudad), `segments` (`[{from, to, at, category}]`) y atributos específicos del medio, mientras que `lat` y `lon` indexan la ubicación principal para consultas de cercanía (`GET /trips/nearby`, `QA-13`).
@@ -297,6 +328,24 @@ stateDiagram-v2
 
 **Regla:** toda transición es una **tx ACID local** en el esquema `filius`. No hay tx distribuida; la compensación es un nuevo evento (Newman ch.6).
 
+### 6.1. State machine — AssistanceCase (Fase 1, ADR-110)
+
+```mermaid
+stateDiagram-v2
+    [*] --> open : POST /internal/assistance/cases (Pater → Filius)
+    open --> handed_off : deep-link a agencia + context_token (Redis TTL 15 min)
+    handed_off --> resolved : assistance.resolved (agencia/proveedor)
+    handed_off --> closed : usuario cierra el caso
+    open --> expired : token vencido sin entrega
+    handed_off --> expired : token vencido sin respuesta
+    resolved --> closed : cierre
+    closed --> [*]
+    expired --> [*]
+```
+
+El `context_token` **nunca** se persiste en PostgreSQL (solo Redis, TTL 15 min, un solo uso);
+la conversación del chat tampoco se persiste. Ningún evento `assistance.*` contiene PII de pasajeros.
+
 ## 7. ClickHouse (OLAP, exclusivo de Spiritus) — Fase 1
 
 Tablas pre-agregadas (esquema `trotamundos`):
@@ -321,3 +370,4 @@ Retención: 24 meses. Acceso solo por Spiritus (read-model a Pater).
 - FR-2/FR-3 (captura por email) → `mailboxes`, `ingested_emails`, `whitelist_senders`.
 - FR-5 (agrupar por viaje, auto-archivar) → `trips.status = archived` + `trip.archived`.
 - FR-7/FR-9 (analítica y monetización) → `INSIGHT_AGGREGATE` / ClickHouse.
+- FR-10/FR-11 + QA-16/QA-17 (Fase 1) → `filius.assistance_cases` + `preferred_agency_id` en `filius.users.preferences`; `assistance.*` → Spiritus.

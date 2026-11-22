@@ -37,6 +37,9 @@ graph LR
   crea/actualiza la reserva.
 - **Spiritus consume** `booking.>` y `trip.>` (Filius los publica) → Analytics ingesta al batch y
   construye el read-model de insights.
+- **Asistente Virtual (Fase 1, ADR-110):** Filius publica `assistance.handoff_requested` y
+  `assistance.resolved`; Spiritus (analytics) los consume para QA-17. **Pater no publica eventos**:
+  crea el caso por REST en Filius. El subject `assistance.>` usa el **mismo** conector de esta arista.
 - **Notification** (Fase 1) será un **módulo dentro de Spiritus** que consume `trip.disrupted`,
   `booking.cancelled` → publica `notification.sent`. No es un servicio independiente en Fase 0.
 
@@ -118,6 +121,27 @@ graph LR
   "payload": { "notification_id": "…", "channel": "push", "status": "delivered" } }
 ```
 
+### 3.7 `assistance.handoff_requested` — publicado por **Filius** (Fase 1)
+```json
+{
+  "type": "assistance.handoff_requested", "source": "filius",
+  "payload": { "case_id": "…", "user_id": "…", "booking_id": "…", "agency_id": "…",
+               "reason": "complex_request", "severity": "medium", "handed_off_at": "…" }
+}
+```
+
+### 3.8 `assistance.resolved` — publicado por **Filius** (Fase 1)
+```json
+{
+  "type": "assistance.resolved", "source": "filius",
+  "payload": { "case_id": "…", "user_id": "…", "outcome": "resolved_by_agency",
+               "tier1_resolved": false, "resolved_at": "…" }
+}
+```
+
+> **Privacidad (QA-9):** los payloads de `assistance.*` contienen **identificadores y métricas**, nunca
+> el texto de la conversación ni datos de pasajeros.
+
 ## 4. Retención y dead letter (ADR-103)
 
 | Stream | Subjects | Retención | Consumidores |
@@ -126,6 +150,7 @@ graph LR
 | `BOOKINGS` | `booking.>` | 30 días | Filius (itinerary), Spiritus (analytics) |
 | `EMAIL` | `email.>` (dead letter) | 7 días | (reprocesamiento manual) |
 | `NOTIFICATIONS` | `notification.>` | 30 días | Spiritus (analytics) |
+| `ASSISTANCE` (Fase 1) | `assistance.>` | 30 días | Filius (assistance), Spiritus (analytics · QA-17) |
 
 - **Dead letter**: un correo sin match (email-ingest) o un webhook inválido (integration) va a un
   stream con retención 7 días + alerta.

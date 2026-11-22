@@ -1,7 +1,8 @@
 -- =============================================================================
 -- Trotamundos — Inicialización de PostgreSQL 16 (Fase 0 · Arquitectura Trinidad)
 -- Deriva de: ADR-104 (segregación por esquema), ADR-106 (usuarios y preferencias),
---            ADR-107 (adaptador analítico Fase 0) y ADR-108 (RBAC por esquema).
+--            ADR-107 (adaptador analítico Fase 0), ADR-108 (RBAC por esquema)
+--            y ADR-109/110 (Asistente Virtual, Fase 1 — tabla preparada).
 -- =============================================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -98,6 +99,26 @@ CREATE TABLE IF NOT EXISTS filius.itinerary_shares (
     expires_at  TIMESTAMPTZ,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+
+-- -----------------------------------------------------------------------------
+-- 3.1 Asistente Virtual (Fase 1, ADR-109/110) — tabla preparada, feature flag desactivado en Fase 0
+--     El context_token y la sesion de chat viven SOLO en Redis (TTL), nunca aqui.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS filius.assistance_cases (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID NOT NULL REFERENCES filius.users(id) ON DELETE CASCADE,
+    trip_id      UUID REFERENCES filius.trips(id) ON DELETE SET NULL,
+    booking_id   UUID REFERENCES filius.bookings(id) ON DELETE SET NULL,
+    status       TEXT NOT NULL DEFAULT 'open'
+                 CHECK (status IN ('open','handed_off','resolved','closed','expired')),
+    reason       TEXT NOT NULL CHECK (reason IN ('complex_request','reschedule_failed','complaint','other')),
+    severity     TEXT NOT NULL CHECK (severity IN ('low','medium','high')),
+    agency_id    TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    resolved_at  TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_assistance_cases_user_status ON filius.assistance_cases (user_id, status);
 
 -- -----------------------------------------------------------------------------
 -- 4. Esquema SPIRITUS — Email Ingest + Adaptador Analítico Fase 0 (ADR-107)

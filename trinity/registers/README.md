@@ -29,7 +29,7 @@ de revisión, y luego se anota aquí.
 ```mermaid
 graph LR
     SPEC["../skills/SPEC_ARCHITECTURE.md<br/>(ADD 3.0 + SDD · marco)"]
-    ADR["adrs/<br/>ADR-101..105 (decisiones)"]
+    ADR["adrs/<br/>ADR-101..110 (decisiones)"]
     VISTAS["architecture/<br/>módulos · cyc · despliegue"]
     UNITS["units/<br/>detalle por unidad"]
     REG["registers/<br/>(este directorio · evolución)"]

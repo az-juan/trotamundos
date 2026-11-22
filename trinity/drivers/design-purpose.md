@@ -28,12 +28,13 @@ de rastrear múltiples aplicaciones y bandejas de correo.
 7. **Geolocalización (GPS)** en móvil para mostrar reservas cercanas al viajero (QA-13, FR-6).
 8. **Analítica y monetización** de datos agregados/anónimos (FR-7, FR-9).
 9. **Acceso seguro** a correos del usuario (QA-9).
+10. **Asistente Virtual** (Fase 1): soporte de primer nivel para reprogramaciones guiadas, consultas de estado e incidencias menores, con derivación de casos complejos a la agencia preferida (FR-10, FR-11, ADR-109/110).
 
 ## 4. Actores
 
 - **Viajero** (web y móvil) — actor principal.
 - **Aplicación externa de viajes** — proveedor de reservas (aerolíneas, hoteles, rentadoras).
-- **Agencias de viajes** — partners B2B.
+- **Agencias de viajes** — partners B2B. La **agencia preferida del usuario** (configurada en `filius.users.preferences`) recibe los casos complejos derivados por el Asistente Virtual (FR-11, ADR-110).
 - **Mail provider** (Gmail, IMAP) — fuente de captura.
 - **Analistas / Partners** — consumidores de insights (FR-7, FR-9).
 
@@ -41,8 +42,7 @@ de rastrear múltiples aplicaciones y bandejas de correo.
 
 - **En scope (Fase 0):** captura por email, agrupación por viaje, gestión manual, integración con
   proveedores, compartición, web + móvil (PWA/native), analítica básica, geolocalización (GPS) en móvil.
-- **Fuera de scope (Fase 0):** pagos, reservas nuevas (solo lectura/gestión de existentes), chat,
-  notificaciones push nativas (Fase 1), identidad independiente (Fase 2).
+- **Fuera de scope (Fase 0):** pagos, reservas nuevas (solo lectura/gestión de existentes), **chat — se provee como Asistente Virtual en Fase 1 (FR-10/FR-11, ADR-109/110), no en el MVP—**, notificaciones push nativas (Fase 1), identidad independiente (Fase 2).
 - **Plataforma:** web (responsive) + iOS (Swift/SwiftUI) + Android (Kotlin/Compose).
 
 ## 6. Métricas de éxito
@@ -52,3 +52,4 @@ de rastrear múltiples aplicaciones y bandejas de correo.
 - Soportar 2M usuarios activos/semana y 15M cuentas (QA-1, QA-2).
 - Mitigar picos masivos sin degradar el núcleo transaccional (QA-3, QA-15).
 - Geolocalización disponible con permiso explícito, solo en foreground (QA-13).
+- En Fase 1: primera respuesta conversacional p95 < 2 s (QA-16) y resolución autonomía ≥ 70 % (QA-17).

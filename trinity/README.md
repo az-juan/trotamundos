@@ -18,8 +18,8 @@ Trotamundos se organiza en **tres unidades** que están **todas conectadas entre
 
 | Persona | Rol (software) | Contenido (colapsa N servicios en 1 unidad) | Perfil de carga |
 |---------|----------------|---------------------------------------------|-----------------|
-| **Pater** — *el Rostro* | Presentación y entrada (facade) | API Gateway (Chi) + Web BFF (templ+htmx) + Mobile BFF (chi/JSON) | per-request, latencia (web ≤ 800 ms, FCP móvil < 1.4 s) |
-| **Filius** — *el Núcleo* | Dominio operacional transaccional | Itinerary + Integration | per-request, I/O, OLTP (PostgreSQL + Redis) |
+| **Pater** — *el Rostro* | Presentación y entrada (facade) | API Gateway (Chi) + Web BFF (templ+htmx) + Mobile BFF (chi/JSON) + **Assistant** (Fase 1) | per-request, latencia (web ≤ 800 ms, FCP móvil < 1.4 s) |
+| **Filius** — *el Núcleo* | Dominio operacional transaccional | Itinerary + Integration + **Assistance** (Fase 1) | per-request, I/O, OLTP (PostgreSQL + Redis) |
 | **Spiritus** — *la Mente* | Procesamiento asíncrono y analítica | Email Ingest + Analytics | batch, CPU/OLAP, bursty (NATS + ClickHouse) |
 
 Las tres unidades comparten **una sola base de código** (`go.work`), **un mismo modelo de dominio
@@ -109,6 +109,8 @@ reutilizan casi intactas:
 | ADR-106 Propiedad del modelo de usuario (`users`), preferencias y login en Fase 0 | [adrs/adr-106-identidad-y-preferencias-fase0.md](./adrs/adr-106-identidad-y-preferencias-fase0.md) | (refina ADR-104 / ADR-014) |
 | ADR-107 Estrategia de persistencia analítica (`Spiritus`) en Fase 0 vs. Fase 1 | [adrs/adr-107-persistencia-analitica-fase0.md](./adrs/adr-107-persistencia-analitica-fase0.md) | (refina ADR-104 / ADR-010) |
 | ADR-108 Aislamiento RBAC en PG, resiliencia de publicación a NATS y SLA Fase 0 | [adrs/adr-108-aislamiento-rbac-y-resiliencia-eventos.md](./adrs/adr-108-aislamiento-rbac-y-resiliencia-eventos.md) | (mitiga DT-01, DT-03, DT-05) |
+| **ADR-109 Asistente Virtual en Pater (Fase 1)** | [adrs/adr-109-asistente-virtual.md](./adrs/adr-109-asistente-virtual.md) | (nueva capacidad, FR-10/QA-16) |
+| **ADR-110 Derivación a agencia, caso y eventos `assistance.*` (Fase 1)** | [adrs/adr-110-derivacion-y-estado-asistente.md](./adrs/adr-110-derivacion-y-estado-asistente.md) | (refina ADR-106/FR-6, FR-11/QA-17) |
 
 ## 6. Diagrama de contexto (C4 nivel 1, CON-2)
 
@@ -123,12 +125,14 @@ graph TB
     A[("🤖 Apps de terceros<br/>aerolíneas · hoteles · rentadoras")]
     M[("✉️ Mail provider<br/>Gmail · IMAP")]
     D[("📈 Analistas / Partners<br/>insights · FR-7 · FR-9")]
+    AG[("🏢 Agencia preferida<br/>casos complejos · FR-11 (Fase 1)")]
 
     U <-->|"HTTPS / REST"| P
     P <-->|"REST"| F
     F <-->|"webhooks / REST resiliente"| A
     S <-->|"OAuth2 / IMAP"| M
     S <-->|"insights (API / export)"| D
+    P <-->|"deep-link B2B · FR-6/FR-11 (Fase 1)"| AG
     S <-->|"SSE / read-model"| P
 
     style P fill:#2d2d44,stroke:#7c6ff7,color:#fff
@@ -137,4 +141,6 @@ graph TB
 ```
 
 > Las tres unidades **son un único sistema** frente a sus actores (C4 nivel 1): la división en 3 es
-> interna (estructura de módulos/despliegue), no una frontera de sistema.
+> interna (estructura de módulos/despliegue), no una frontera de sistema. El proveedor de LLM y la
+> agencia preferida son actores **externos** del Asistente Virtual (Fase 1, ADR-109/110): no hay
+> cuarta unidad ni nueva arista NATS.

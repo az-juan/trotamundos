@@ -27,6 +27,7 @@ tags:
   - name: webhooks
   - name: sharing
   - name: insights
+  - name: assistant
   - name: health
 
 paths:
@@ -384,6 +385,89 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  # ---------------------------------------------------------------------------
+  # Asistente Virtual (Fase 1, ADR-109/110) - No expuesto en Fase 0
+  # ---------------------------------------------------------------------------
+  /assistant/messages:
+    post:
+      tags: [assistant]
+      summary: Enviar un mensaje al Asistente Virtual (primer nivel de soporte, FR-10)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssistantMessageRequest" }
+      responses:
+        "200":
+          description: Respuesta del asistente (intencion + respuesta + acciones sugeridas)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistantMessageResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/Conflict" }
+
+  /assistant/stream:
+    get:
+      tags: [assistant]
+      summary: SSE de respuesta conversacional en streaming (QA-16; misma infraestructura que /insights/stream)
+      parameters:
+        - { in: query, name: session_id, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: text/event-stream (delta de tokens + evento final)
+          content:
+            text/event-stream:
+              schema: { type: string }
+
+  /assistant/cases/{caseId}:
+    parameters:
+      - { in: path, name: caseId, required: true, schema: { type: string } }
+    get:
+      tags: [assistant]
+      summary: Consultar estado de un caso derivado a la agencia (FR-11, ADR-110)
+      responses:
+        "200":
+          description: Estado del caso (open/handed_off/resolved/closed/expired)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistanceCase" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /internal/assistance/cases:
+    post:
+      tags: [assistant]
+      summary: "Contrato INTERNO Pater→Filius: abrir caso de asistencia (no expuesto en el borde, ADR-110)"
+      parameters:
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string } }
+        - { in: header, name: X-Correlation-ID, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OpenAssistanceCaseRequest" }
+      responses:
+        "201":
+          description: Caso abierto + enlace de derivación con context_token de un solo uso
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistanceHandoff" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /internal/assistance/cases/{caseId}:
+    parameters:
+      - { in: path, name: caseId, required: true, schema: { type: string } }
+    get:
+      tags: [assistant]
+      summary: "Contrato INTERNO Pater→Filius: consultar caso (no expuesto en el borde)"
+      responses:
+        "200":
+          description: Estado del caso
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistanceCase" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -458,6 +542,7 @@ components:
         locale: { type: string, default: "es" }
         currency: { type: string, default: "USD" }
         gps_radius_km: { type: number, default: 50 }
+        preferred_agency_id: { type: string, nullable: true, description: "Agencia preferida para derivaciones del Asistente Virtual (ADR-110)" }
         travel_preferences:
           type: object
           additionalProperties: true
@@ -607,3 +692,69 @@ components:
               count: { type: integer }
         cancellation_rate: { type: number }
         generated_at: { type: string, format: date-time }
+    AssistantMessageRequest:
+      type: object
+      required: [message]
+      properties:
+        session_id: { type: string, description: "Sesion efimera en Redis (TTL 30 min)" }
+        message: { type: string, maxLength: 2000 }
+        trip_id: { type: string }
+        booking_id: { type: string }
+        consent_share_context: { type: boolean, default: false, description: "Consentimiento para enviar contexto redactado al LLM (QA-9)" }
+
+    AssistantMessageResponse:
+      type: object
+      required: [intent, answer, tier1_resolved, correlation_id]
+      properties:
+        intent: { $ref: "#/components/schemas/AssistantIntent" }
+        answer: { type: string }
+        tier1_resolved: { type: boolean, description: "true si no se derivo a la agencia" }
+        actions:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string, enum: [deep_link, open_case, view_trip] }
+              url: { type: string, format: uri }
+              label: { type: string }
+        case_id: { type: string, nullable: true }
+        degraded: { type: boolean, description: "true si respondio el clasificador determinista (ASSISTANT_DEGRADED)" }
+        correlation_id: { type: string }
+
+    AssistantIntent:
+      type: string
+      enum: [status_query, reschedule_guidance, minor_issue, complex_handoff, out_of_scope]
+
+    OpenAssistanceCaseRequest:
+      type: object
+      required: [user_id, reason, severity]
+      properties:
+        user_id: { type: string, format: uuid }
+        trip_id: { type: string }
+        booking_id: { type: string }
+        reason: { type: string, enum: [complex_request, reschedule_failed, complaint, other] }
+        severity: { type: string, enum: [low, medium, high] }
+
+    AssistanceCase:
+      type: object
+      required: [id, user_id, status, reason, severity, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        trip_id: { type: string, nullable: true }
+        booking_id: { type: string, nullable: true }
+        status: { type: string, enum: [open, handed_off, resolved, closed, expired] }
+        reason: { type: string }
+        severity: { type: string, enum: [low, medium, high] }
+        agency_id: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        resolved_at: { type: string, format: date-time, nullable: true }
+
+    AssistanceHandoff:
+      type: object
+      required: [case, deep_link_url, context_token_expires_at]
+      properties:
+        case: { $ref: "#/components/schemas/AssistanceCase" }
+        deep_link_url: { type: string, format: uri, description: "Deep-link a la agencia preferida (FR-6)" }
+        context_token: { type: string, description: "Opaco, un solo uso, TTL 15 min en Redis" }
+        context_token_expires_at: { type: string, format: date-time }

@@ -4,13 +4,13 @@ graph TB
 
     GW["go.work — workspace Go<br/>(una sola sustancia: construye las 3 unidades + shared)"]
 
-    GW --> P["🕊️ units/pater/ — módulo Go<br/>Gateway · Web BFF · Mobile BFF"]
-    GW --> F["✝️ units/filius/ — módulo Go<br/>Itinerary · Integration"]
+    GW --> P["🕊️ units/pater/ — módulo Go<br/>Gateway · Web BFF · Mobile BFF · Assistant (Fase 1)"]
+    GW --> F["✝️ units/filius/ — módulo Go<br/>Itinerary · Integration · Assistance (Fase 1)"]
     GW --> S["🔥 units/spiritus/ — módulo Go<br/>Email Ingest · Analytics"]
     GW --> SH["shared/ — contratos y andamiaje<br/>(solo lo estable: eventos, resilient, otel, config, idgen)"]
 
-    P --> PP["gateway/ · web-bff/ · mobile-bff/<br/>(módulos internos en proceso)"]
-    F --> FF["itinerary/ · integration/<br/>(módulos internos en proceso)"]
+    P --> PP["gateway/ · web-bff/ · mobile-bff/ · assistant/<br/>(módulos internos en proceso)"]
+    F --> FF["itinerary/ · integration/ · assistance/<br/>(módulos internos en proceso)"]
     S --> SS["email-ingest/ · analytics/<br/>(módulos internos en proceso)"]
 
     %% Cada módulo interno reproduce el hexágono; se muestra uno como arquetipo
@@ -63,6 +63,11 @@ graph TD
 | **Filius ↔ Spiritus** | NATS JetStream (async) | Hechos de negocio (`booking.*`, `trip.*`) | Desacople de picos; cada consumidor reacciona (QA-3 / QA-5) |
 | **Spiritus → Pater** | read-model · SSE | Insights y notificaciones (proyecciones analíticas) | CQRS: analítica sin tocar el OLTP (QA-15) |
 
+> **Asistente Virtual (Fase 1, ADR-109/110):** `assistant/` se añade **dentro de Pater** y `assistance/`
+> **dentro de Filius**. No hay cuarta unidad ni cuarta arista: el chat usa `Pater↔Filius` (REST) para
+> consultar estado y crear el caso, y Filius publica `assistance.*` por la arista `Filius↔Spiritus`.
+> La sesión y el token de derivación viven en Redis (TTL), sin transcripción persistida.
+>
 > **Information hiding (Parnas / Newman ch.2):** lo que cruza una arista es **contrato** (evento
 > versionado o endpoint OpenAPI), **nunca** el código interno de la otra unidad. Así el triángulo
 > preserva la información oculta *sin* multiplicar bases de datos ni procesos. La dependencia de
@@ -88,7 +93,8 @@ Email Ingest/Analytics) son **módulos en proceso** — sin salto de red entre e
   en un workspace para construirlos juntos, pero **cada unidad es una unidad de build/deploy
   independiente**.
 - **Dentro de cada unidad, sub-módulos por responsabilidad** (no por servicio): `units/filius/itinerary`,
-  `units/filius/integration`, etc. Comparten proceso y memoria → **llamada a función, no red**.
+  `units/filius/integration`, `units/filius/assistance` (Fase 1), `units/pater/assistant` (Fase 1), etc.
+  Comparten proceso y memoria → **llamada a función, no red**.
 - **`shared/` solo contiene lo estable**: tipos de eventos, el cliente resiliente, setup de OTel, config
   e IDs. **Nada de lógica de dominio compartida** → si un concepto empieza a compartirse, es señal de
   que pertenece a una unidad (o debe extraerse), no de que se comparta (Newman ch.5, DRY perils).
@@ -135,6 +141,7 @@ Trinidad no toca la arquitectura interna de cada módulo, solo cómo se agrupan 
 | `shared/` solo contratos | Evita acoplamiento de contenido entre unidades | Newman ch.5 |
 | Contratos generados (OpenAPI/JSON-Schema) | API y eventos versionados; expansion/contract en vez de breaking changes | ADR-103 |
 | Segregación por esquema en PostgreSQL compartido | Cada unidad es dueña de sus tablas; nadie escribe en el interior de otra (ADR-104) | ADR-104 |
+| `assistant/` en Pater + `assistance/` en Filius (Fase 1) | Asistente sin nuevo deployable ni nueva arista; caso de dominio donde están los datos | ADR-109, ADR-110 |
 
 ## 4. Por qué 3 y no 7 (regla de extracción, heredada de ADR-001)
 
