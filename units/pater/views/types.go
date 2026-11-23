@@ -159,14 +159,21 @@ type UserIdentity struct {
 	DisplayName string `json:"display_name"`
 }
 
-
 // GeoPoint es una reserva geolocalizada para el mapa SSR (QA-13).
 type GeoPoint struct {
 	TripID      string
 	TripName    string
+	Status      string
 	Provider    string
 	ProviderRef string
 	Type        string
 	Lat         float64
 	Lon         float64
+}
+
+// MapPageData alimenta el mapa: filtro activo y conteos por estado.
+type MapPageData struct {
+	Status string
+	Counts map[string]int
+	Total  int
 }

@@ -74,8 +74,8 @@ func (f *fakeStore) Activity(context.Context) ([]views.ActivityView, error) {
 func (f *fakeStore) IngestDemo(context.Context) error { f.ingested++; return nil }
 func (f *fakeStore) GeoPoints(context.Context) ([]views.GeoPoint, error) {
 	return []views.GeoPoint{
-		{TripName: "Buenos Aires → Madrid", Provider: "Aerolíneas del Plata", ProviderRef: "PNR-1930", Lat: -34.6037, Lon: -58.3816},
-		{TripName: "Buenos Aires → Madrid", Provider: "Hotel Presidente", ProviderRef: "HT-4471", Lat: -34.6200, Lon: -58.4200},
+		{TripName: "Buenos Aires → Madrid", Status: "upcoming", Provider: "Aerolíneas del Plata", ProviderRef: "PNR-1930", Lat: -34.6037, Lon: -58.3816},
+		{TripName: "Buenos Aires → Madrid", Status: "archived", Provider: "Hotel Presidente", ProviderRef: "HT-4471", Lat: -34.6200, Lon: -58.4200},
 	}, nil
 }
 func (f *fakeStore) Mailboxes(context.Context) ([]views.MailboxView, error) {
@@ -152,7 +152,7 @@ func TestFragmentosYFormularios(t *testing.T) {
 
 func TestPaginasComponenHeaderFooter(t *testing.T) {
 	h, _ := newHandlers()
-	for _, path := range []string{"/trips/view", "/insights/view", "/map", "/mailboxes", "/whitelists", "/trips/abc123", "/nearby", "/shared/tok", "/login"} {
+	for _, path := range []string{"/trips/view", "/insights/view", "/map", "/calendar", "/mailboxes", "/whitelists", "/trips/abc123", "/nearby", "/shared/tok", "/login"} {
 		w := serve(h, http.MethodGet, path, "", nil)
 		if w.Code != http.StatusOK {
 			t.Fatalf("%s: %d", path, w.Code)
@@ -206,10 +206,14 @@ func TestOperacionesHTMX(t *testing.T) {
 	}
 }
 
-type fakeRenderer struct{ calls int }
+type fakeRenderer struct {
+	calls      int
+	lastStatus string
+}
 
-func (f *fakeRenderer) Render(context.Context, []views.GeoPoint) ([]byte, error) {
+func (f *fakeRenderer) Render(_ context.Context, _ []views.GeoPoint, status string) ([]byte, error) {
 	f.calls++
+	f.lastStatus = status
 	return []byte("PNG-FAKE"), nil
 }
 
@@ -329,5 +333,42 @@ func TestHTMXMantieneTituloYNavegacion(t *testing.T) {
 	}
 	if strings.Contains(body, "<html") {
 		t.Error("la respuesta HTMX no debe redibujar el documento completo")
+	}
+}
+
+func TestMapaPorEstado(t *testing.T) {
+	h, _ := newHandlers()
+	page := serve(h, http.MethodGet, "/map?status=active", "", nil).Body.String()
+	for _, needle := range []string{`/map/image?status=active`, "Próximos (1)", "En curso (0)", "Archivados (1)"} {
+		if !strings.Contains(page, needle) {
+			t.Errorf("falta %q en el mapa filtrado", needle)
+		}
+	}
+	if !strings.Contains(page, `href="/calendar"`) {
+		t.Error("el mapa debe enlazar al calendario")
+	}
+
+	r := &fakeRenderer{}
+	h.MapRenderer = r
+	serve(h, http.MethodGet, "/map/image?status=active", "", nil)
+	if r.lastStatus != "active" {
+		t.Errorf("el renderer recibió el filtro %q, esperaba active", r.lastStatus)
+	}
+}
+
+func TestCalendarioMensual(t *testing.T) {
+	h, f := newHandlers()
+	f.trips = []views.TripView{
+		{ID: "t1", Name: "Viaje con fechas", Status: "active", StartDate: "2026-12-03", EndDate: "2026-12-06"},
+		{ID: "t2", Name: "Viaje sin fechas", Status: "upcoming"},
+	}
+	body := serve(h, http.MethodGet, "/calendar?month=2026-12", "", nil).Body.String()
+	for _, needle := range []string{"Diciembre 2026", "calendar-grid", "Viaje con fechas", "Viaje sin fechas", "trip-active", `month=2026-11`, `month=2027-01`} {
+		if !strings.Contains(body, needle) {
+			t.Errorf("falta %q en el calendario", needle)
+		}
+	}
+	if n := strings.Count(body, `class="calendar-weekday"`); n != 7 {
+		t.Errorf("esperaba 7 días de la semana, hay %d", n)
 	}
 }

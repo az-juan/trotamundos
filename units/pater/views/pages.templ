@@ -190,25 +190,40 @@ templ ShareLink(result ShareResult) {
 	}
 }
 
-templ MapPage(points []GeoPoint) {
+templ MapPage(data MapPageData) {
 	<div class="page-shell narrow">
-		@PageHeading("Cartografía", "Mapa de viajes", fmtInt(len(points)) + " reservas geolocalizadas")
-		@Panel("Plano real · OpenStreetMap, estilo café 1930", MapImage())
-		@Panel("Leyenda", MapLegend())
+		@PageHeading("Cartografía", "Mapa de viajes", fmtInt(data.Total) + " reservas geolocalizadas")
+		@Panel("Plano real · OpenStreetMap, estilo café 1930", MapImage(data.Status))
+		@Panel("Filtrar por estado del viaje", MapStatusFilters(data))
+		@Panel("Leyenda", MapLegend(data))
+		<div class="calendar-link">
+			<a class="btn" href="/calendar" hx-get="/calendar" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Abrir calendario de viajes →</a>
+		</div>
 	</div>
 }
 
-templ MapImage() {
+templ MapImage(status string) {
 	<div class="map-frame">
-		<img class="map-real" src="/map/image" alt="Mapa real de los viajes con marcadores y traza" width="880" height="480" />
+		<img class="map-real" src={ "/map/image?status=" + status } alt="Mapa real de los viajes con marcadores y traza por estado" width="880" height="480" />
 		<p class="map-credit">Mapa y datos © OpenStreetMap contributors · ODbL · teselas en caché</p>
 	</div>
 }
 
-templ MapLegend() {
+templ MapStatusFilters(data MapPageData) {
+	<div class="filters" role="group" aria-label="Filtrar mapa por estado">
+		<a class={ FilterClass(data.Status, "") } href="/map" hx-get="/map" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Todos ({ fmtInt(data.Total) })</a>
+		<a class={ FilterClass(data.Status, "upcoming") } href="/map?status=upcoming" hx-get="/map?status=upcoming" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Próximos ({ fmtInt(data.Counts["upcoming"]) })</a>
+		<a class={ FilterClass(data.Status, "active") } href="/map?status=active" hx-get="/map?status=active" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">En curso ({ fmtInt(data.Counts["active"]) })</a>
+		<a class={ FilterClass(data.Status, "archived") } href="/map?status=archived" hx-get="/map?status=archived" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Archivados ({ fmtInt(data.Counts["archived"]) })</a>
+	</div>
+}
+
+templ MapLegend(data MapPageData) {
 	<ul class="map-legend">
-		<li><span class="legend-dot legend-bronze"></span> Reserva geolocalizada (QA-13)</li>
-		<li><span class="legend-line"></span> Traza entre reservas del viaje</li>
+		<li><span class="legend-dot legend-bronze"></span> Próximos ({ fmtInt(data.Counts["upcoming"]) })</li>
+		<li><span class="legend-dot legend-slate"></span> En curso ({ fmtInt(data.Counts["active"]) })</li>
+		<li><span class="legend-dot legend-bordeaux"></span> Archivados ({ fmtInt(data.Counts["archived"]) })</li>
+		<li><span class="legend-line"></span> Traza entre reservas del mismo viaje</li>
 		<li><span class="legend-note">Imagen generada en servidor con go-staticmaps · sin JavaScript</span></li>
 	</ul>
 }

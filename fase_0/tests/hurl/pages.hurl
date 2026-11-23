@@ -40,6 +40,12 @@ HTTP 200
 [Asserts]
 body contains "Cercanías"
 
+GET {{host}}/calendar
+HTTP 200
+[Asserts]
+body contains "Calendario de viajes"
+body contains "calendar-grid"
+
 GET {{host}}/static/css/base.css
 HTTP 200
 [Asserts]

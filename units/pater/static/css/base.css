@@ -461,3 +461,45 @@ body {
 .legend-bronze { background: var(--bronze); border: 2px solid var(--bordeaux); }
 .legend-line { width: 26px; border-top: 3px dashed var(--bordeaux); display: inline-block; }
 .legend-note { color: var(--wood-dark); font-style: italic; }
+.legend-slate { background: var(--slate); border: 2px solid var(--ink); }
+.legend-bordeaux { background: var(--bordeaux); border: 2px solid var(--bronze); }
+.calendar-link { display: flex; justify-content: flex-end; margin-top: 18px; }
+
+/* ------------------------------------------- calendario mensual (SSR/HTMX) */
+.calendar-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin: 6px 0 18px;
+}
+.calendar-title { font-family: var(--font-display); font-size: 20px; color: var(--bordeaux); }
+.calendar-grid {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px; padding: 6px;
+  border: 6px solid var(--wood); outline: 2px solid var(--wood-dark);
+  background: var(--paper-light);
+  box-shadow: inset 0 0 0 4px var(--wood-light), 5px 6px 0 rgba(51,35,24,.22);
+}
+.calendar-weekday {
+  padding: 6px 2px; text-align: center; font-size: 11px;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--paper); background: var(--slate);
+}
+.calendar-day {
+  min-height: 86px; padding: 6px; overflow: hidden;
+  border: 1px solid rgba(51,92,103,.18);
+  background: #fffaf0; display: flex; flex-direction: column; gap: 4px;
+}
+.calendar-day.outside { background: #efe3c5; color: var(--muted); }
+.calendar-day.is-today { outline: 2px solid var(--bronze); outline-offset: -2px; }
+.calendar-daynum { font-family: var(--font-mono); font-size: 11px; font-weight: bold; color: var(--wood-dark); }
+.calendar-trip {
+  display: block; padding: 2px 4px; font-size: 10px; line-height: 1.25;
+  border-left: 4px solid var(--bronze); background: #f8ecd0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.calendar-trip.trip-active { border-left-color: var(--slate); background: #e4ebe5; }
+.calendar-trip.trip-archived { border-left-color: var(--bordeaux); background: #f0dfdf; }
+
+@media (max-width: 760px) {
+  .calendar-day { min-height: 58px; padding: 3px; }
+  .calendar-trip { font-size: 9px; }
+}

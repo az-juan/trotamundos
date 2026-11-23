@@ -1,0 +1,50 @@
+package views
+
+templ CalendarPage(cal CalendarMonth) {
+	<div class="page-shell narrow">
+		@PageHeading("Oficina central", "Calendario de viajes", cal.Label)
+		<div class="calendar-toolbar">
+			<a class="btn ghost" href={ "/calendar?month=" + cal.Prev } hx-get={ "/calendar?month=" + cal.Prev } hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">← Mes anterior</a>
+			<strong class="calendar-title">{ cal.Label }</strong>
+			<a class="btn ghost" href={ "/calendar?month=" + cal.Next } hx-get={ "/calendar?month=" + cal.Next } hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Mes siguiente →</a>
+		</div>
+		<div class="calendar-grid">
+			for _, dia := range []string{"Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"} {
+				<div class="calendar-weekday">{ dia }</div>
+			}
+			for _, week := range cal.Weeks {
+				for _, day := range week {
+					<div class={ CalendarDayClass(day) }>
+						<span class="calendar-daynum">{ fmtInt(day.Number) }</span>
+						for _, trip := range day.Trips {
+							<span class={ "calendar-trip " + StatusClass(trip.Status) } title={ trip.Name }>{ trip.Name }</span>
+						}
+					</div>
+				}
+			}
+		</div>
+		@Panel("Leyenda del calendario", CalendarLegend())
+		if len(cal.Undated) > 0 {
+			@Panel("Viajes sin fechas", CalendarUndated(cal.Undated))
+		}
+		<div class="calendar-link">
+			<a class="btn" href="/map" hx-get="/map" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Ver mapa de viajes →</a>
+		</div>
+	</div>
+}
+
+templ CalendarLegend() {
+	<ul class="map-legend">
+		<li><span class="legend-dot legend-bronze"></span> Próximos viajes</li>
+		<li><span class="legend-dot legend-slate"></span> Viajes en curso</li>
+		<li><span class="legend-dot legend-bordeaux"></span> Viajes archivados</li>
+	</ul>
+}
+
+templ CalendarUndated(trips []TripView) {
+	<ul class="data-list">
+		for _, trip := range trips {
+			<li><strong>{ trip.Name }</strong> <span>{ StatusLabel(trip.Status) }</span></li>
+		}
+	</ul>
+}

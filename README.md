@@ -85,7 +85,11 @@ docker compose ps          # 7 servicios: nginx, pater, filius, spiritus, nats, 
 ### Mapa y estética del prototipo
 
 - `/map` muestra un **mapa real** generado en servidor con `go-staticmaps` y teselas de OpenStreetMap:
-  marcadores por reserva geolocalizada y traza entre ellas, sin JavaScript de mapas ni API key.
+  marcadores por reserva geolocalizada y una traza por viaje, sin JavaScript de mapas ni API key.
+  El color distingue **próximos** (bronce), **en curso** (pizarra) y **archivados** (burdeos); los chips
+  filtran por estado y actualizan `/map/image?status=…` vía HTMX.
+- `/calendar` muestra un **calendario mensual SSR** con los viajes en cada fecha de su rango, coloreados
+  por el mismo criterio, con navegación de mes por HTMX y una lista aparte para viajes sin fechas.
 - La paleta de `images/palette.jpg` se complementa con **tonos madera/café** (`--wood`, `--wood-dark`,
   `--wood-light`, `--coffee`) en marcos, paneles, boletos y botones: estética de café bonaerense de 1930.
 
@@ -103,7 +107,7 @@ requiere Go ≥ 1.25 (dentro de la restricción documentada «Go 1.23+»).
 ### Páginas y componentes
 
 - **Páginas** (`units/pater/views/`): Panel, Viajes, Detalle de viaje, Boletín, Buzones, Remitentes,
-  Preferencias, Itinerario compartido, Acceso, Cercanías (GPS) y Mapa real.
+  Preferencias, Itinerario compartido, Acceso, Cercanías (GPS), Mapa real y Calendario mensual.
 - **Componentes reutilizables** (`views/components.templ`): `Header`, `Footer`, `Panel`, `PageHeading`,
   `Field`, `SubmitButton`, `Badge`, `EmptyState`, `BookingRows`, `BookingForm`, `TripTicket`, `Stats`,
   `Timeline` y `DataList`. Las páginas los componen; no repiten encabezados, tablas ni formularios.

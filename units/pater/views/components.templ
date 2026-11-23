@@ -26,6 +26,7 @@ templ NavLinks(active string, signedIn bool) {
 	<a class={ NavClass(active, "panel") } href="/" hx-get="/" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Panel</a>
 	<a class={ NavClass(active, "insights") } href="/insights/view" hx-get="/insights/view" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Boletín</a>
 	<a class={ NavClass(active, "map") } href="/map" hx-get="/map" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Mapa</a>
+	<a class={ NavClass(active, "calendar") } href="/calendar" hx-get="/calendar" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Calendario</a>
 	<a class={ NavClass(active, "mailboxes") } href="/mailboxes" hx-get="/mailboxes" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Buzones</a>
 	<a class={ NavClass(active, "whitelists") } href="/whitelists" hx-get="/whitelists" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Remitentes</a>
 	<a class={ NavClass(active, "preferences") } href="/preferences" hx-get="/preferences" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Preferencias</a>

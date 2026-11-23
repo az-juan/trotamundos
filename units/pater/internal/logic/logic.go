@@ -341,8 +341,8 @@ func (s *SQLStore) GeoPoints(ctx context.Context) ([]views.GeoPoint, error) {
 	out := []views.GeoPoint{}
 	for _, r := range rows {
 		out = append(out, views.GeoPoint{
-			TripID: r.TripID, TripName: r.TripName, Provider: r.Provider,
-			ProviderRef: r.ProviderRef, Type: r.Type, Lat: r.Lat, Lon: r.Lon,
+			TripID: r.TripID, TripName: r.TripName, Status: r.Status,
+			Provider: r.Provider, ProviderRef: r.ProviderRef, Type: r.Type, Lat: r.Lat, Lon: r.Lon,
 		})
 	}
 	return out, nil

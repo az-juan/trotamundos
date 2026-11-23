@@ -219,7 +219,8 @@ func (q *Queries) ListBookingsForTrip(ctx context.Context, tripID pgtype.UUID) (
 }
 
 const listGeoPoints = `-- name: ListGeoPoints :many
-SELECT t.id::text AS trip_id, t.name AS trip_name, b.provider,
+SELECT t.id::text AS trip_id, t.name AS trip_name, t.status AS status,
+       b.provider,
        b.provider_ref, b.type,
        (b.details->>'lat')::float8 AS lat,
        (b.details->>'lon')::float8 AS lon
@@ -231,6 +232,7 @@ ORDER BY t.name, b.provider
 type ListGeoPointsRow struct {
 	TripID      string  `json:"trip_id"`
 	TripName    string  `json:"trip_name"`
+	Status      string  `json:"status"`
 	Provider    string  `json:"provider"`
 	ProviderRef string  `json:"provider_ref"`
 	Type        string  `json:"type"`
@@ -250,6 +252,7 @@ func (q *Queries) ListGeoPoints(ctx context.Context) ([]ListGeoPointsRow, error)
 		if err := rows.Scan(
 			&i.TripID,
 			&i.TripName,
+			&i.Status,
 			&i.Provider,
 			&i.ProviderRef,
 			&i.Type,

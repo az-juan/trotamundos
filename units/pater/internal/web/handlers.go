@@ -43,7 +43,7 @@ type Store interface {
 }
 
 type MapRenderer interface {
-	Render(ctx context.Context, points []views.GeoPoint) ([]byte, error)
+	Render(ctx context.Context, points []views.GeoPoint, status string) ([]byte, error)
 }
 
 type Handlers struct {
@@ -218,6 +218,7 @@ func (h *Handlers) Handler() http.Handler {
 	r.Get("/nearby", h.nearby)
 	r.Get("/map", h.mapPage)
 	r.Get("/map/image", h.mapImage)
+	r.Get("/calendar", h.calendar)
 	r.Get("/login", func(w http.ResponseWriter, req *http.Request) {
 		h.page(w, req, "Trotamundos · Acceso", "panel", views.LoginPage(""))
 	})
@@ -409,13 +410,50 @@ func (h *Handlers) login(w http.ResponseWriter, req *http.Request) {
 	h.page(w, req, "Trotamundos · Panel de viajes", "panel", views.DashboardPage(h.data(req.Context(), "")))
 }
 
+// mapStatus normaliza el filtro: solo upcoming/active/archived, "" = todos.
+func mapStatus(value string) string {
+	switch value {
+	case "upcoming", "active", "archived":
+		return value
+	default:
+		return ""
+	}
+}
+
+func filterGeo(points []views.GeoPoint, status string) []views.GeoPoint {
+	if status == "" {
+		return points
+	}
+	out := []views.GeoPoint{}
+	for _, p := range points {
+		if p.Status == status {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+func geoCounts(points []views.GeoPoint) map[string]int {
+	counts := map[string]int{"upcoming": 0, "active": 0, "archived": 0}
+	for _, p := range points {
+		counts[p.Status]++
+	}
+	return counts
+}
+
 func (h *Handlers) mapPage(w http.ResponseWriter, req *http.Request) {
 	points, err := h.Store.GeoPoints(req.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	h.page(w, req, "Trotamundos · Mapa de viajes", "map", views.MapPage(points))
+	status := mapStatus(req.URL.Query().Get("status"))
+	data := views.MapPageData{
+		Status: status,
+		Counts: geoCounts(points),
+		Total:  len(points),
+	}
+	h.page(w, req, "Trotamundos · Mapa de viajes", "map", views.MapPage(data))
 }
 
 func (h *Handlers) mapImage(w http.ResponseWriter, req *http.Request) {
@@ -428,7 +466,8 @@ func (h *Handlers) mapImage(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	png, err := h.MapRenderer.Render(req.Context(), points)
+	status := mapStatus(req.URL.Query().Get("status"))
+	png, err := h.MapRenderer.Render(req.Context(), filterGeo(points, status), status)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
@@ -436,4 +475,15 @@ func (h *Handlers) mapImage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("Cache-Control", "public, max-age=900")
 	w.Write(png)
+}
+
+func (h *Handlers) calendar(w http.ResponseWriter, req *http.Request) {
+	trips, err := h.Store.Trips(req.Context(), "")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	month := views.ParseMonth(req.URL.Query().Get("month"))
+	cal := views.BuildCalendar(trips, month)
+	h.page(w, req, "Trotamundos · Calendario", "calendar", views.CalendarPage(cal))
 }

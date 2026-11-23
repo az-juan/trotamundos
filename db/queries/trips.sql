@@ -66,7 +66,8 @@ WHERE (b.details->>'lat')::float8 BETWEEN sqlc.arg(lat)::float8 - sqlc.arg(radiu
 ORDER BY t.created_at DESC;
 
 -- name: ListGeoPoints :many
-SELECT t.id::text AS trip_id, t.name AS trip_name, b.provider,
+SELECT t.id::text AS trip_id, t.name AS trip_name, t.status AS status,
+       b.provider,
        b.provider_ref, b.type,
        (b.details->>'lat')::float8 AS lat,
        (b.details->>'lon')::float8 AS lon

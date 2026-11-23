@@ -5,7 +5,6 @@ package maps
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"image/color"
 	"image/png"
 	"math"
@@ -23,11 +22,23 @@ type Renderer struct{}
 
 func New() *Renderer { return &Renderer{} }
 
-// Render devuelve el PNG del mapa con marcadores y traza entre las reservas geolocalizadas.
-func (r *Renderer) Render(_ context.Context, points []views.GeoPoint) ([]byte, error) {
-	if len(points) == 0 {
-		return nil, fmt.Errorf("no hay puntos geolocalizados")
+// Un color por estado de viaje: próximos (bronce), en curso (pizarra) y
+// archivados (burdeos). La leyenda del panel usa los mismos colores.
+var statusColors = map[string]color.RGBA{
+	"upcoming": {R: 224, G: 159, B: 62, A: 255},
+	"active":   {R: 51, G: 92, B: 103, A: 255},
+	"archived": {R: 84, G: 11, B: 14, A: 255},
+}
+
+func markerColor(status string) color.RGBA {
+	if c, ok := statusColors[status]; ok {
+		return c
 	}
+	return statusColors["upcoming"]
+}
+
+// Render devuelve el PNG del mapa con marcadores por estado y una traza por viaje.
+func (r *Renderer) Render(_ context.Context, points []views.GeoPoint) ([]byte, error) {
 	ctx := sm.NewContext()
 	ctx.SetSize(880, 480)
 	ctx.SetTileProvider(sm.NewTileProviderOpenStreetMaps())
@@ -37,21 +48,30 @@ func (r *Renderer) Render(_ context.Context, points []views.GeoPoint) ([]byte, e
 		ctx.SetCache(sm.NewTileCache(cacheDir, 0o755))
 	}
 
-	bordeaux := color.RGBA{R: 84, G: 11, B: 14, A: 255}
-	bronze := color.RGBA{R: 224, G: 159, B: 62, A: 255}
 	positions := make([]s2.LatLng, 0, len(points))
+	paths := map[string][]s2.LatLng{}
+	tripStatus := map[string]string{}
+	order := []string{}
 	for _, p := range points {
 		pos := s2.LatLngFromDegrees(p.Lat, p.Lon)
 		positions = append(positions, pos)
-		marker := sm.NewMarker(pos, bordeaux, 14)
-		marker.Label = p.Provider + " · " + p.ProviderRef
+		marker := sm.NewMarker(pos, markerColor(p.Status), 14)
+		marker.Label = views.StatusLabel(p.Status) + " · " + p.Provider
 		marker.SetLabelColor(color.RGBA{R: 51, G: 35, B: 24, A: 255})
 		marker.LabelXOffset = 8
 		marker.LabelYOffset = -8
 		ctx.AddMarker(marker)
+
+		if _, seen := paths[p.TripID]; !seen {
+			order = append(order, p.TripID)
+			tripStatus[p.TripID] = p.Status
+		}
+		paths[p.TripID] = append(paths[p.TripID], pos)
 	}
-	if len(positions) > 1 {
-		ctx.AddPath(sm.NewPath(positions, bronze, 4))
+	for _, id := range order {
+		if len(paths[id]) > 1 {
+			ctx.AddPath(sm.NewPath(paths[id], markerColor(tripStatus[id]), 3))
+		}
 	}
 
 	// Encaje de la vista: si hay varias reservas, calcular límites con margen; si no, zoom fijo.
@@ -72,9 +92,13 @@ func (r *Renderer) Render(_ context.Context, points []views.GeoPoint) ([]byte, e
 			ctx.SetCenter(positions[0])
 			ctx.SetZoom(13)
 		}
-	} else {
+	} else if len(positions) == 1 {
 		ctx.SetCenter(positions[0])
 		ctx.SetZoom(13)
+	} else {
+		// Filtro sin reservas geolocalizadas: vista de contexto sin marcadores.
+		ctx.SetCenter(s2.LatLngFromDegrees(-34.6037, -58.3816))
+		ctx.SetZoom(5)
 	}
 	ctx.SetMaxZoom(16)
 
@@ -90,28 +114,34 @@ func (r *Renderer) Render(_ context.Context, points []views.GeoPoint) ([]byte, e
 }
 
 // Cache simple en memoria para no descargar teselas en cada petición del navegador.
+type cachedImage struct {
+	data []byte
+	at   time.Time
+}
+
 type CachedRenderer struct {
-	inner *Renderer
-	ttl   time.Duration
-	mu    chan struct{}
-	data  []byte
-	at    time.Time
+	inner  *Renderer
+	ttl    time.Duration
+	mu     chan struct{}
+	images map[string]cachedImage
 }
 
 func NewCached() *CachedRenderer {
-	return &CachedRenderer{inner: New(), ttl: 15 * time.Minute, mu: make(chan struct{}, 1)}
+	return &CachedRenderer{inner: New(), ttl: 15 * time.Minute, mu: make(chan struct{}, 1), images: map[string]cachedImage{}}
 }
 
-func (c *CachedRenderer) Render(ctx context.Context, points []views.GeoPoint) ([]byte, error) {
+// Render cachea por filtro de estado: el mapa de "en curso" no debe servir la
+// imagen de "archivados" aunque cambie el query param.
+func (c *CachedRenderer) Render(ctx context.Context, points []views.GeoPoint, status string) ([]byte, error) {
 	c.mu <- struct{}{}
 	defer func() { <-c.mu }()
-	if c.data != nil && time.Since(c.at) < c.ttl {
-		return c.data, nil
+	if img, ok := c.images[status]; ok && time.Since(img.at) < c.ttl {
+		return img.data, nil
 	}
 	data, err := c.inner.Render(ctx, points)
 	if err != nil {
 		return nil, err
 	}
-	c.data, c.at = data, time.Now()
+	c.images[status] = cachedImage{data: data, at: time.Now()}
 	return data, nil
 }
