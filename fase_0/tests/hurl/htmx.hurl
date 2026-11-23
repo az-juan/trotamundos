@@ -6,7 +6,15 @@ HTTP 200
 [Asserts]
 body contains "trip-list"
 body contains "hx-swap-oob=\"true\""
+body contains "id=\"filters\""
+
+# Las páginas HTMX sí redibujan navegación y título vía OOB.
+GET {{host}}/mailboxes
+HX-Request: true
+HTTP 200
+[Asserts]
 body contains "id=\"site-nav\""
+body contains "hx-swap-oob=\"true\""
 
 GET {{host}}/insights
 HX-Request: true

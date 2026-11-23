@@ -3,7 +3,7 @@ package views
 templ TripsPage(data DashboardData) {
 	<div class="page-shell narrow">
 		@PageHeading("Itinerarios", "Todos sus viajes", fmtInt(len(data.Trips)) + " expedientes")
-		@TripList(data.Trips, data.Active)
+		@TripList(data.Trips, data.Active, false)
 	</div>
 }
 
@@ -53,11 +53,8 @@ templ TripActions(tripID string) {
 templ InsightsPage(data InsightPageData) {
 	<div class="page-shell narrow">
 		@PageHeading("Spiritus", "Boletín de la Mente", "FR-7 · QA-15")
-		<section id="insights-stats" class="panel" hx-get="/insights" hx-trigger="every 5s" hx-swap="innerHTML">
-			@Stats(data.Insights)
-			<p class="rail-footnote">Último registro: { data.Insights.LastEventAt }</p>
-		</section>
-		@Panel("Correo y eventos recientes", Timeline(data.Activity))
+		@InsightsPanel(data.Insights)
+		@ActivityFeed(data.Activity)
 	</div>
 }
 
@@ -170,14 +167,7 @@ templ NearbyPage(data NearbyData) {
 	<div class="page-shell narrow">
 		@PageHeading("Geolocalización", "Reservas cercanas", "QA-13 · permiso explícito")
 		@Panel("Coordenadas", NearbyForm(data))
-		<div id="trip-list" class="trip-list" hx-swap-oob="true">
-			if len(data.Trips) == 0 {
-				@EmptyState("No hay reservas dentro del radio indicado.")
-			}
-			for _, t := range data.Trips {
-				@TripTicket(t, true)
-			}
-		</div>
+		@TripList(data.Trips, "", false)
 	</div>
 }
 

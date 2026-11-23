@@ -136,8 +136,8 @@ func (h *Handlers) tripListFragment(w http.ResponseWriter, r *http.Request, stat
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	renderComponent(r.Context(), w, views.TripList(trips, status))
-	renderComponent(r.Context(), w, views.FilterBar(status))
+	renderComponent(r.Context(), w, views.TripList(trips, status, true))
+	renderComponent(r.Context(), w, views.FilterBar(status, true))
 }
 
 // Handler registra únicamente rutas HTML/HTMX.
@@ -180,11 +180,17 @@ func (h *Handlers) Handler() http.Handler {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
 		}
-		renderComponent(req.Context(), w, views.Stats(ins))
+		renderComponent(req.Context(), w, views.InsightsBody(ins))
 	})
 	r.Post("/demo/ingest", func(w http.ResponseWriter, req *http.Request) {
 		if err := h.Store.IngestDemo(req.Context()); err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		// Desde la navegación global no existe #activity: se redibuja el panel
+		// completo para que el botón nunca quede sin efecto.
+		if req.Header.Get("HX-Target") != "activity" {
+			h.page(w, req, "Trotamundos · Panel de viajes", "panel", views.DashboardPage(h.data(req.Context(), "")))
 			return
 		}
 		act, _ := h.Store.Activity(req.Context())
@@ -196,10 +202,6 @@ func (h *Handlers) Handler() http.Handler {
 		h.page(w, req, "Trotamundos · Viajes", "panel", views.TripsPage(h.data(req.Context(), req.URL.Query().Get("status"))))
 	})
 	r.Get("/trips/{id}", func(w http.ResponseWriter, req *http.Request) {
-		if wantsHTMXFragment(req) {
-			h.renderTripDetail(w, req, chi.URLParam(req, "id"), "")
-			return
-		}
 		h.renderTripDetail(w, req, chi.URLParam(req, "id"), "")
 	})
 	r.Post("/trips/{id}/share", h.shareTrip)
@@ -380,6 +382,12 @@ func (h *Handlers) nearby(w http.ResponseWriter, req *http.Request) {
 	trips, err := h.Store.Nearby(req.Context(), data.Lat, data.Lon, data.Radius)
 	if err == nil {
 		data.Trips = trips
+	}
+	// El formulario actualiza solo #trip-list; una respuesta de página aquí
+	// reemplazaría el formulario con el propio fragmento.
+	if wantsHTMXFragment(req) && req.Header.Get("HX-Target") == "trip-list" {
+		renderComponent(req.Context(), w, views.TripList(data.Trips, "", false))
+		return
 	}
 	h.page(w, req, "Trotamundos · Cercanías", "panel", views.NearbyPage(data))
 }

@@ -1,7 +1,13 @@
 package views
 
-templ FilterBar(active string) {
-	<div id="filters" class="filters" role="group" aria-label="Filtrar por estado" hx-swap-oob="true">
+// oob solo se activa en respuestas de fragmento: si se marcara en una página
+// completa, HTMX extraería el bloque antes de insertarlo en #main-content.
+templ FilterBar(active string, oob bool) {
+	<div id="filters" class="filters" role="group" aria-label="Filtrar por estado"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
 		<button class={ FilterClass(active, "") } type="button" hx-get="/trips" hx-target="#trip-list" hx-swap="outerHTML">Todos</button>
 		<button class={ FilterClass(active, "upcoming") } type="button" hx-get="/trips?status=upcoming" hx-target="#trip-list" hx-swap="outerHTML">Próximos</button>
 		<button class={ FilterClass(active, "active") } type="button" hx-get="/trips?status=active" hx-target="#trip-list" hx-swap="outerHTML">En curso</button>
@@ -25,13 +31,13 @@ templ DashboardPage(data DashboardData) {
 		</section>
 		<div class="dashboard-grid">
 			<aside class="sidebar">
-				@Panel("Filtrar viajes", FilterBar(data.Active))
+				@Panel("Filtrar viajes", FilterBar(data.Active, false))
 				@Panel("Nuevo viaje", NewTripForm())
 				@Panel("Aviso de la casa", HouseNotice())
 			</aside>
 			<section class="content-column">
 				@PageHeading("Itinerarios", "Sus expedientes de viaje", fmtInt(len(data.Trips)) + " viajes")
-				@TripList(data.Trips, data.Active)
+				@TripList(data.Trips, data.Active, false)
 			</section>
 			<aside class="right-rail">
 				@InsightsPanel(data.Insights)
@@ -56,8 +62,12 @@ templ HouseNotice() {
 	<p>Pulse <strong>Simular correo</strong> para que Spiritus descubra una reserva y la remita al Núcleo, tal como lo haría un mensaje de confirmación.</p>
 }
 
-templ TripList(trips []TripView, active string) {
-	<div id="trip-list" class="trip-list" hx-swap-oob="true">
+templ TripList(trips []TripView, active string, oob bool) {
+	<div id="trip-list" class="trip-list"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
 		if len(trips) == 0 {
 			@EmptyState("No hay viajes en esta carpeta. Abra un expediente nuevo o simule un correo.")
 		}
@@ -67,19 +77,25 @@ templ TripList(trips []TripView, active string) {
 	</div>
 }
 
+// InsightsBody es el contenido íntegro de #insights. Se reutiliza en el render
+// inicial y en el refresh para que el título y la nota no desaparezcan.
+templ InsightsBody(s InsightView) {
+	<div class="panel-heading-row">
+		<h2 class="panel-title">Boletín de la Mente</h2>
+		<button class="refresh-link" type="button" hx-get="/insights" hx-target="#insights" hx-swap="innerHTML">Actualizar</button>
+	</div>
+	@Stats(s)
+	<p class="rail-footnote">Último registro: { s.LastEventAt }</p>
+}
+
 templ InsightsPanel(s InsightView) {
-	<section id="insights" class="panel rail-panel" hx-swap-oob="true">
-		<div class="panel-heading-row">
-			<h2 class="panel-title">Boletín de la Mente</h2>
-			<button class="refresh-link" type="button" hx-get="/insights" hx-target="#insights" hx-swap="outerHTML">Actualizar</button>
-		</div>
-		@Stats(s)
-		<p class="rail-footnote">Último registro: { s.LastEventAt }</p>
+	<section id="insights" class="panel rail-panel" hx-get="/insights" hx-trigger="every 5s" hx-swap="innerHTML">
+		@InsightsBody(s)
 	</section>
 }
 
 templ ActivityFeed(items []ActivityView) {
-	<section id="activity" class="panel rail-panel" hx-swap-oob="true">
+	<section id="activity" class="panel rail-panel">
 		<div class="panel-heading-row">
 			<h2 class="panel-title">Correo recibido</h2>
 			<button class="refresh-link" type="button" hx-post="/demo/ingest" hx-target="#activity" hx-swap="outerHTML">Simular</button>

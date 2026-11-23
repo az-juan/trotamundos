@@ -236,6 +236,85 @@ func TestMapaRealSinJS(t *testing.T) {
 	}
 }
 
+func serveHeaders(h *Handlers, method, path string, headers map[string]string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, nil)
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	w := httptest.NewRecorder()
+	h.Handler().ServeHTTP(w, req)
+	return w
+}
+
+// Una respuesta HTMX de página solo puede traer dos swaps OOB: título y #site-nav.
+// Si un bloque interno llevara hx-swap-oob, HTMX lo extraería antes de
+// insertarlo en #main-content y la página quedaría incompleta al navegar.
+func TestNavegacionHTMXNoPierdeBloques(t *testing.T) {
+	h, _ := newHandlers()
+	w := serveHeaders(h, http.MethodGet, "/", map[string]string{"HX-Request": "true"})
+	body := w.Body.String()
+	for _, id := range []string{"trip-list", "filters", "insights", "activity"} {
+		if !strings.Contains(body, `id="`+id+`"`) {
+			t.Errorf("falta el bloque #%s al navegar al panel", id)
+		}
+	}
+	if n := strings.Count(body, `hx-swap-oob="true"`); n != 2 {
+		t.Errorf("esperaba 2 swaps OOB (título y navegación), hay %d", n)
+	}
+}
+
+func TestRefreshDeInsightsConservaEncabezadoYNota(t *testing.T) {
+	h, _ := newHandlers()
+	body := serveHeaders(h, http.MethodGet, "/insights", map[string]string{"HX-Request": "true"}).Body.String()
+	for _, needle := range []string{"stat-grid", "panel-heading-row", "rail-footnote"} {
+		if !strings.Contains(body, needle) {
+			t.Errorf("el refresh de insights perdió %q", needle)
+		}
+	}
+	if strings.Contains(body, "hx-swap-oob") {
+		t.Error("el refresh de insights no debe usar swaps OOB")
+	}
+}
+
+func TestNearbyFragmentoYUbicacion(t *testing.T) {
+	h, _ := newHandlers()
+	fragmento := serveHeaders(h, http.MethodGet, "/nearby", map[string]string{
+		"HX-Request": "true", "HX-Target": "trip-list",
+	})
+	if strings.Contains(fragmento.Body.String(), "<html") || strings.Contains(fragmento.Body.String(), "hx-swap-oob") {
+		t.Error("el formulario de cercanías debe recibir solo #trip-list, sin OOB")
+	}
+	if !strings.Contains(fragmento.Body.String(), `id="trip-list"`) {
+		t.Error("al formulario de cercanías le falta #trip-list")
+	}
+	pagina := serveHeaders(h, http.MethodGet, "/nearby", map[string]string{"HX-Request": "true"}).Body.String()
+	if strings.Contains(pagina, `id="trip-list" class="trip-list" hx-swap-oob`) {
+		t.Error("#trip-list no debe marcarse OOB dentro de la página de cercanías")
+	}
+	if !strings.Contains(pagina, `id="trip-list"`) {
+		t.Error("la página de cercanías debe incluir sus resultados")
+	}
+}
+
+func TestSimularCorreoDesdeNavRedibujaPanel(t *testing.T) {
+	h, _ := newHandlers()
+	desdeNav := serveHeaders(h, http.MethodPost, "/demo/ingest", map[string]string{
+		"HX-Request": "true", "HX-Target": "main-content",
+	}).Body.String()
+	if !strings.Contains(desdeNav, `id="trip-list"`) || !strings.Contains(desdeNav, `id="activity"`) {
+		t.Error("la navegación global debe redibujar el panel completo")
+	}
+	if strings.Contains(desdeNav, `id="trip-list" class="trip-list" hx-swap-oob`) {
+		t.Error("el panel redibujado no debe marcar #trip-list como OOB")
+	}
+	desdePanel := serveHeaders(h, http.MethodPost, "/demo/ingest", map[string]string{
+		"HX-Request": "true", "HX-Target": "activity",
+	}).Body.String()
+	if !strings.Contains(desdePanel, `id="activity"`) || !strings.Contains(desdePanel, `hx-swap-oob="true"`) {
+		t.Error("el botón del panel debe actualizar #activity y la lista vía OOB")
+	}
+}
+
 func TestHTMXMantieneTituloYNavegacion(t *testing.T) {
 	h, _ := newHandlers()
 	req := httptest.NewRequest(http.MethodGet, "/mailboxes", nil)

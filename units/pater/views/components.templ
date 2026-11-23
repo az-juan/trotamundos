@@ -30,8 +30,8 @@ templ NavLinks(active string, signedIn bool) {
 	<a class={ NavClass(active, "whitelists") } href="/whitelists" hx-get="/whitelists" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Remitentes</a>
 	<a class={ NavClass(active, "preferences") } href="/preferences" hx-get="/preferences" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Preferencias</a>
 	if signedIn {
-		<button class="nav-link" type="button" hx-post="/demo/ingest" hx-target="#activity" hx-swap="outerHTML">Simular correo</button>
-		<button class="nav-link" type="button" hx-post="/auth/logout" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Salir</button>
+		<button class="nav-link" type="button" hx-post="/demo/ingest" hx-target="#main-content" hx-swap="innerHTML">Simular correo</button>
+		<button class="nav-link" type="button" hx-post="/auth/logout" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="/login">Salir</button>
 	} else {
 		<a class="nav-link" href="/login" hx-get="/login" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Acceder</a>
 	}

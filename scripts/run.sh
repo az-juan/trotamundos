@@ -3,6 +3,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+./scripts/gen.sh
+
 export PATER_PG_DSN="${PATER_PG_DSN:-postgres://pater_app:pater_dev@127.0.0.1:55432/trotamundos?sslmode=disable}"
 echo "Levantando Filius (:8081), Spiritus (:8082) y Pater (:${PATER_PORT:-8090})…"
 (cd units/filius   && go run ./cmd/filius)   &

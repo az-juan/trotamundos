@@ -5,10 +5,14 @@
 # Deriva de: ADR-003 (Go 1.23 estático), ADR-102 (monorepo go.work), ADR-105
 # =============================================================================
 
+FROM golang:1.25-alpine AS templgen
+RUN go install github.com/a-h/templ/cmd/templ@v0.3.1020
+
 FROM golang:1.25-alpine AS builder
 WORKDIR /workspace
 
 RUN apk add --no-cache git ca-certificates tzdata
+COPY --from=templgen /go/bin/templ /usr/local/bin/templ
 
 COPY go.work* ./
 COPY shared/go.mod ./shared/
@@ -19,6 +23,9 @@ RUN go mod download
 
 COPY shared/ ./shared/
 COPY units/ ./units/
+
+# Las vistas _templ.go no se versionan: se generan dentro del build.
+RUN cd units/pater && templ generate
 
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/pater ./units/pater/cmd/pater && \
     CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/filius ./units/filius/cmd/filius && \

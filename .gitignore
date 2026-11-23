@@ -1,1 +1,5 @@
 .agents/*
+
+# Vistas autogeneradas por templ: se regeneran con `templ generate`
+# (scripts/test.sh, scripts/run.sh y el build de Docker).
+*_templ.go
