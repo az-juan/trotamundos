@@ -8,20 +8,46 @@ templ CalendarPage(cal CalendarMonth) {
 			<strong class="calendar-title">{ cal.Label }</strong>
 			<a class="btn ghost" href={ "/calendar?month=" + cal.Next } hx-get={ "/calendar?month=" + cal.Next } hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Mes siguiente →</a>
 		</div>
-		<div class="calendar-grid">
-			for _, dia := range []string{"Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"} {
-				<div class="calendar-weekday">{ dia }</div>
-			}
-			for _, week := range cal.Weeks {
-				for _, day := range week {
-					<div class={ CalendarDayClass(day) }>
-						<span class="calendar-daynum">{ fmtInt(day.Number) }</span>
-						for _, trip := range day.Trips {
-							<span class={ "calendar-trip " + StatusClass(trip.Status) } title={ trip.Name }>{ trip.Name }</span>
+		<div class="agenda-sheet">
+			<div class="agenda-masthead">
+				<span class="agenda-mark" aria-hidden="true">✦</span>
+				<div class="agenda-heading">
+					<span class="agenda-kicker">Compañía Trotamundos · Libro de itinerarios</span>
+					<h3 class="agenda-month">{ cal.Label }</h3>
+				</div>
+				<span class="agenda-folio">Folio { cal.Key }</span>
+			</div>
+			<div class="calendar-grid">
+				<table class="agenda-table">
+					<thead>
+						<tr>
+							<th class="agenda-weeknum" scope="col">Sem.</th>
+							for _, dia := range []string{"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"} {
+								<th class="agenda-weekday" scope="col">{ dia }</th>
+							}
+						</tr>
+					</thead>
+					<tbody>
+						for _, week := range cal.Weeks {
+							<tr>
+								<th class="agenda-weeknum" scope="row">{ fmtInt(week.Number) }</th>
+								for _, day := range week.Days {
+									<td class={ CalendarDayClass(day) }>
+										<span class="calendar-daynum">{ fmtInt(day.Number) }</span>
+										for _, trip := range day.Trips {
+											<span class={ "calendar-trip " + StatusClass(trip.Status) } title={ trip.Name }>{ trip.Name }</span>
+										}
+									</td>
+								}
+							</tr>
 						}
-					</div>
-				}
-			}
+					</tbody>
+				</table>
+			</div>
+			<div class="agenda-foot">
+				<span>Asientos del mes · registros de la Oficina Central</span>
+				<span>Buenos Aires, MCMXXX</span>
+			</div>
 		</div>
 		@Panel("Leyenda del calendario", CalendarLegend())
 		if len(cal.Undated) > 0 {
@@ -42,9 +68,13 @@ templ CalendarLegend() {
 }
 
 templ CalendarUndated(trips []TripView) {
-	<ul class="data-list">
+	<ul class="ledger-list">
 		for _, trip := range trips {
-			<li><strong>{ trip.Name }</strong> <span>{ StatusLabel(trip.Status) }</span></li>
+			<li>
+				<span class="ledger-dot"></span>
+				<strong>{ trip.Name }</strong>
+				<span class={ "ledger-status " + StatusClass(trip.Status) }>{ StatusLabel(trip.Status) }</span>
+			</li>
 		}
 	</ul>
 }

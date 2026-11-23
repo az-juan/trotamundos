@@ -21,12 +21,18 @@ type CalendarDay struct {
 	Trips   []TripView
 }
 
+// CalendarWeek es una fila de la agenda: número de semana ISO y sus 7 días.
+type CalendarWeek struct {
+	Number int
+	Days   []CalendarDay
+}
+
 type CalendarMonth struct {
 	Key     string
 	Label   string
 	Prev    string
 	Next    string
-	Weeks   [][]CalendarDay
+	Weeks   []CalendarWeek
 	Undated []TripView
 }
 
@@ -84,7 +90,8 @@ func BuildCalendar(trips []TripView, month time.Time) CalendarMonth {
 		}
 		week = append(week, day)
 		if len(week) == 7 {
-			cal.Weeks = append(cal.Weeks, week)
+			_, weekNumber := date.ISOWeek()
+			cal.Weeks = append(cal.Weeks, CalendarWeek{Number: weekNumber, Days: week})
 			week = []CalendarDay{}
 		}
 	}

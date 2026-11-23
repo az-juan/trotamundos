@@ -363,12 +363,12 @@ func TestCalendarioMensual(t *testing.T) {
 		{ID: "t2", Name: "Viaje sin fechas", Status: "upcoming"},
 	}
 	body := serve(h, http.MethodGet, "/calendar?month=2026-12", "", nil).Body.String()
-	for _, needle := range []string{"Diciembre 2026", "calendar-grid", "Viaje con fechas", "Viaje sin fechas", "trip-active", `month=2026-11`, `month=2027-01`} {
+	for _, needle := range []string{"Diciembre 2026", "calendar-grid", `<table class="agenda-table"`, "agenda-masthead", "agenda-weeknum", "Viaje con fechas", "Viaje sin fechas", "trip-active", `month=2026-11`, `month=2027-01`} {
 		if !strings.Contains(body, needle) {
 			t.Errorf("falta %q en el calendario", needle)
 		}
 	}
-	if n := strings.Count(body, `class="calendar-weekday"`); n != 7 {
+	if n := strings.Count(body, `class="agenda-weekday"`); n != 7 {
 		t.Errorf("esperaba 7 días de la semana, hay %d", n)
 	}
 }
