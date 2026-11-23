@@ -256,14 +256,27 @@ func (s *SQLStore) Activity(ctx context.Context) ([]views.ActivityView, error) {
 
 var refPattern = regexp.MustCompile(`(?i:pnr|reserva|confirmaci[oó]n)[\s:·-]*([A-Z]{2,8}-[A-Z0-9]{2,8}|[A-Z0-9]{5,12})`)
 
+// proveedoresDemo alimenta "Simular correo": cada captura elige una entidad
+// ficticia distinta para que el panel no repita siempre la misma reserva.
+var proveedoresDemo = []struct{ name, prefix, kind string }{
+	{"Aerolíneas del Plata", "AR", "transport"},
+	{"Líneas Aéreas Cóndor", "CO", "transport"},
+	{"Vapores del Sur", "VS", "transport"},
+	{"Expresos Andinos", "EX", "transport"},
+	{"Hotel Presidente", "HT", "lodging"},
+	{"Posada del Ceibo", "PC", "lodging"},
+}
+
 // IngestDemo simula la captura de un correo y escribe directamente con sqlc (FR-2).
 func (s *SQLStore) IngestDemo(ctx context.Context) error {
-	body := fmt.Sprintf("Estimado viajero: su reserva PNR-%04d con Aerolíneas del Plata ha sido confirmada.", time.Now().Unix()%10000)
+	demo := proveedoresDemo[time.Now().UnixNano()%int64(len(proveedoresDemo))]
+	ref := fmt.Sprintf("%s-%04X", demo.prefix, time.Now().UnixNano()%0x10000)
+	body := fmt.Sprintf("Estimado viajero: su reserva %s con %s ha sido confirmada.", ref, demo.name)
 	match := refPattern.FindStringSubmatch(body)
 	if match == nil {
 		return fmt.Errorf("no se pudo extraer la reserva")
 	}
-	ref := strings.ToUpper(match[1])
+	ref = strings.ToUpper(match[1])
 	if _, err := s.q.FindBookingByRef(ctx, ref); err == nil {
 		return nil // dedup por referencia
 	}
@@ -272,11 +285,11 @@ func (s *SQLStore) IngestDemo(ctx context.Context) error {
 		return fmt.Errorf("no hay viaje destino: %v", err)
 	}
 	if _, err := s.q.AddBooking(ctx, db.AddBookingParams{
-		TripID: uuid(trips[0].ID), Kind: "transport", Provider: "Aerolíneas del Plata", ProviderRef: ref,
+		TripID: uuid(trips[0].ID), Kind: demo.kind, Provider: demo.name, ProviderRef: ref,
 	}); err != nil {
 		return err
 	}
-	payload, _ := json.Marshal(map[string]any{"provider": "Aerolíneas del Plata", "provider_ref": ref, "type": "transport"})
+	payload, _ := json.Marshal(map[string]any{"provider": demo.name, "provider_ref": ref, "type": demo.kind})
 	return s.q.InsertAnalyticsEvent(ctx, db.InsertAnalyticsEventParams{
 		EventID: ref, EventType: "booking.discovered", Payload: payload,
 	})

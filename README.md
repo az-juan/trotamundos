@@ -51,7 +51,8 @@ Ya hay un **MVP corrible y testeable** con los tres deployables de la Trinidad:
 ```bash
 ./scripts/test.sh   # templ generate + go test de los 4 módulos
 ./scripts/run.sh    # levanta las 3 unidades (Pater en :8090 por defecto)
-./scripts/hurl.sh   # 38 peticiones E2E con Hurl contra el compose (ver abajo)
+./scripts/seed.sh   # genera datos de demo aleatorios: destinos de Argentina y el mundo, entidades ficticias
+./scripts/hurl.sh   # 39 peticiones E2E con Hurl contra el compose (ver abajo)
 ```
 
 - Navegador: **http://localhost:8090** · salud: `/healthz` en los tres puertos.

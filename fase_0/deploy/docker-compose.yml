@@ -123,6 +123,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./postgres/seed_variety.sql:/docker-entrypoint-initdb.d/zz-seed_variety.sql:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U trotamundos"]
