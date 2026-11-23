@@ -1,8 +1,9 @@
-# 02 — Unidad Pater (el Rostro) — Gateway · Web BFF · Mobile BFF
+# 02 — Unidad Pater (el Rostro) — Web BFF (Fase 0) · Mobile BFF (Fase 1)
 
 > **Rol**: presentación y entrada (facade). Es la **única** unidad expuesta al borde (atrás de Nginx/TLS).
 > **Perfil de carga**: per-request, baja latencia (web ≤ 800 ms, QA-6; FCP móvil < 1.4 s, QA-7).
-> **ADR de origen**: 102 (unidad), 103 (arista REST con Filius). Complementa: 105 (despliegue), 014 (JWT, emisión/validación).
+> **ADR de origen**: 102 (unidad), 111 (sqlc/HTMX/cookie), 112 (mapa real). 103/014/105 describen la referencia Fase 1.
+> **ADR-111 (prototipo Fase 0):** los handlers consultan PostgreSQL con **sqlc** directamente y responden HTML/HTMX; no hay API JSON, clientes REST internos ni JWT/JWKS. La sesión es una cookie firmada HttpOnly.
 > **Colapsa** los deployables de `main`: API Gateway (ADR-006) + Web BFF (ADR-009) + Mobile BFF (ADR-013),
 > ahora **módulos internos en proceso** dentro de `units/pater`. En **Fase 1** se añade `assistant/`
 > (Asistente Virtual, ADR-109/110) **sin nuevo deployable ni nueva arista**.
@@ -10,9 +11,9 @@
 ## 1. Responsabilidad
 
 Pater es el **Rostro** del sistema: recibe toda entrada (web, móvil, terceros) y la agrega/renderiza.
-No contiene dominio operacional; delega lecturas/escrituras en **Filius** por REST (arista Pater↔Filius).
+En **Fase 0** consulta PostgreSQL con sqlc y renderiza HTML/HTMX (ADR-111); no contiene dominio operacional. La delegación REST en Filius es la referencia Fase 1.
 
-- **gateway/** — punto único de entrada (ADR-013): routing, **validación JWT RS256** (JWKS, ADR-014),
+- **gateway/** *(referencia Fase 1)* — punto único de entrada (ADR-013): routing, **validación JWT RS256** (JWKS, ADR-014),
   rate limit por cliente (token bucket, `golang.org/x/time/rate`), proxy inverso hacia Filius,
   inyección de `X-Correlation-ID`. Generado con `oapi-codegen` desde `fase_0/docs/api/openapi.yaml`.
 - **web-bff/** — render del servidor con **templ + htmx + Tailwind** (ADR-009): HTML completo en la
@@ -34,7 +35,7 @@ No contiene dominio operacional; delega lecturas/escrituras en **Filius** por RE
 | Templates web | `github.com/a-h/templ` | templates compilados a `.go` (web-bff) |
 | Interactividad | htmx 1.9+ | swap de fragmentos, SSE, polling |
 | CSS | Tailwind CSS 3.x | utilities → build estático |
-| Auth | JWT RS256 (JWKS) | validación de token (Fase 0; emisión por el Gateway, ADR-014) |
+| Auth | Cookie firmada HMAC (Fase 0) · JWT RS256 (Fase 1) | `internal/web/session.go`, HttpOnly; ADR-111/014 |
 | Rate limit | `golang.org/x/time/rate` | token bucket por cliente/API key |
 | Cache | `github.com/redis/go-redis/v9` | sesiones, rate limit, plantillas renderizadas |
 | Tracing/metrics | OpenTelemetry + Prometheus | latencia p99, tasa de error, rate-limit hits |
@@ -77,7 +78,7 @@ sequenceDiagram
     participant WB as Pater · web-bff
     participant FI as Filius (itinerary)
     U->>G: GET /trips/123 (HTTPS, JWT)
-    G->>G: validar JWT RS256 + rate limit
+    G->>G: validar cookie firmada (Fase 0) o JWT RS256 (Fase 1) + rate limit
     G->>WB: route (X-Correlation-ID) (en proceso dentro de Pater)
     WB->>FI: GET /bookings?trip=123 (REST, timeout)
     FI-->>WB: trip + bookings
@@ -90,21 +91,21 @@ sequenceDiagram
 |--------|----------------------------|
 | QA-6 (web ≤ 800 ms) | REST directo a Filius, sin capa intermedia Go→Go innecesaria; cache Redis de plantillas |
 | QA-7 (FCP móvil < 1.4 s) | web-bff SSR (HTML en la primera respuesta), mobile-bff JSON ligero |
-| QA-9 (acceso seguro) | validación JWT RS256 en el gateway; secretos por instancia |
+| QA-9 (acceso seguro) | cookie firmada HttpOnly + `SESSION_SECRET` en Fase 0; JWT/OIDC en Fase 1 |
 | QA-12 (trazabilidad) | `X-Correlation-ID` inyectado y propagado por OTel a Filius/Spiritus |
 | QA-14 (canales web/móvil) | web-bff (HTML/htmx) y mobile-bff (JSON) como experiencias separadas (ADR-013) |
 | QA-16 (respuesta < 2 s, Fase 1) | streaming por SSE/htmx; `IntentClassifier` con timeout + fallback determinista; sin bloquear el render |
 | QA-17 (resolución ≥ 70 %, Fase 1) | intenciones resueltas localmente frente a derivaciones; medido por `assistance.*` en Spiritus |
 
-## 6. Flujo de autenticación (JWT RS256, Fase 0)
+## 6. Flujo de autenticación (cookie firmada en Fase 0; JWT RS256 en Fase 1)
 
-Fase 0: **el Gateway de Pater emite y valida** el JWT (ADR-014 adaptado y refinado en ADR-106; extracción de Identity en Fase 2).
+Fase 0: **Pater valida credenciales con sqlc y emite una cookie firmada** (ADR-111). El JWT de ADR-014 queda para Fase 1.
 
-- **Emisión:** `POST /auth/login` en Pater delega la verificación de credenciales a **Filius** mediante una llamada REST interna (`POST /internal/auth/verify`, que consulta `filius.users` sin que Pater toque el esquema `filius`, ADR-106) y emite un JWT RS256 con claims: `sub` (user_id), `email`, `iat`, `exp` (15 min), `jti`.
+- **Fase 1 (referencia) — Emisión:** `POST /auth/login` en Pater delega la verificación de credenciales a **Filius** mediante una llamada REST interna (`POST /internal/auth/verify`, que consulta `filius.users` sin que Pater toque el esquema `filius`, ADR-106) y emite un JWT RS256 con claims: `sub` (user_id), `email`, `iat`, `exp` (15 min), `jti`.
 - **Preferencias del usuario:** `GET / PATCH /users/me/preferences` expone y actualiza el documento `filius.users.preferences` (JSONB: `locale`, `currency`, `gps_radius_km` y `travel_preferences`) delegando por REST interno en Filius (ADR-106).
-- **Validación:** cada request al Gateway valida la firma con la clave pública (JWKS en `/.well-known/jwks.json`), verifica `exp` y `iss`, e inyecta `X-User-Id` + `X-Correlation-ID` hacia los BFFs.
-- **Refresh:** `POST /auth/refresh` con `refresh_token` (opaco, en Redis, TTL 7 días) → nuevo access token.
-- **Rotación de claves:** la clave privada vive en `JWT_PRIVATE_KEY_FILE` (env). Rotación manual en Fase 0; en Fase 2, Vault + OIDC.
+- **Fase 1 (referencia) — Validación:** cada request al Gateway valida la firma con la clave pública (JWKS en `/.well-known/jwks.json`), verifica `exp` y `iss`, e inyecta `X-User-Id` + `X-Correlation-ID` hacia los BFFs.
+- **Fase 1 (referencia) — Refresh:** `POST /auth/refresh` con `refresh_token` (opaco, en Redis, TTL 7 días) → nuevo access token.
+- **Fase 1 (referencia):** la clave privada vive en `JWT_PRIVATE_KEY_FILE`; en Fase 2, Vault + OIDC. Fase 0 usa `SESSION_SECRET` (ADR-111).
 - **Logout:** `POST /auth/logout` revoca el refresh token en Redis (el access token expira solo).
 
 ## 7. Protocolo SSE (notificaciones en vivo)
@@ -131,7 +132,7 @@ Toda respuesta de error usa el schema `Error` de OpenAPI:
 
 ## 9. Geolocalización (GPS) — QA-13
 
-Implementado en el **Mobile BFF** (`mobile-bff/`):
+Fase 1 (no implementado en Fase 0): **Mobile BFF** (`mobile-bff/`):
 
 - El cliente móvil envía `X-Device-Location: lat,lon` (permiso explícito, solo en foreground).
 - Endpoint `GET /trips/nearby?lat=..&lon=..&radius=..` devuelve reservas/viajes cercanos al viajero (usa `filius` + filtro por distancia).
@@ -142,7 +143,7 @@ Implementado en el **Mobile BFF** (`mobile-bff/`):
 
 - **Contrato:** `POST /assistant/messages`, `GET /assistant/stream` (SSE), `GET /assistant/cases/{id}`;
   mismo payload JSON para `mobile-bff`, fragmentos htmx para `web-bff`.
-- **Flujo:** el Gateway valida JWT RS256, aplica rate limit e inyecta `X-Correlation-ID`; `assistant/`
+- **Flujo (Fase 1):** el Gateway valida el token, aplica rate limit e inyecta `X-Correlation-ID`; `assistant/`
   clasifica la intención y, para **consultas de estado**, llama a Filius por REST con timeout.
 - **Reprogramación:** el asistente **no escribe en el proveedor**; entrega un *deep-link* (FR-6) y
   confirma el nuevo estado cuando llega `booking.confirmed` desde Filius.

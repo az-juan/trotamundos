@@ -1,0 +1,254 @@
+package web
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"testing"
+
+	"trotamundos/pater/views"
+)
+
+type fakeStore struct {
+	trips    []views.TripView
+	created  []string
+	added    []string
+	prefs    views.PreferencesData
+	senders  []views.SenderView
+	ingested int
+}
+
+func (f *fakeStore) Trips(context.Context, string) ([]views.TripView, error) { return f.trips, nil }
+func (f *fakeStore) CreateTrip(_ context.Context, name, _, _ string) error {
+	f.created = append(f.created, name)
+	f.trips = append(f.trips, views.TripView{ID: "new", Name: name, Status: "upcoming"})
+	return nil
+}
+func (f *fakeStore) AddBooking(_ context.Context, _, _, provider, ref string) error {
+	f.added = append(f.added, provider+"/"+ref)
+	return nil
+}
+func (f *fakeStore) Trip(_ context.Context, id string) (views.TripView, error) {
+	for _, t := range f.trips {
+		if t.ID == id {
+			return t, nil
+		}
+	}
+	return views.TripView{}, errors.New("no encontrado")
+}
+func (f *fakeStore) Travelers(context.Context, string) ([]views.TravelerView, error) {
+	return []views.TravelerView{{ID: "v1", Name: "Ana Ruiz"}}, nil
+}
+func (f *fakeStore) ShareTrip(context.Context, string) (views.ShareResult, error) {
+	return views.ShareResult{Token: "tok", URL: "/shared/tok", ExpiresAt: "2026-12-01T00:00:00Z"}, nil
+}
+func (f *fakeStore) ArchiveTrip(context.Context, string) error { return nil }
+func (f *fakeStore) Verify(_ context.Context, email, password string) (views.UserIdentity, error) {
+	if email != "dev@trotamundos.app" || password != "dev" {
+		return views.UserIdentity{}, errors.New("credenciales incorrectas")
+	}
+	return views.UserIdentity{ID: "user-1", Email: email}, nil
+}
+func (f *fakeStore) Preferences(context.Context, string) (views.PreferencesData, error) {
+	return f.prefs, nil
+}
+func (f *fakeStore) UpdatePreferences(_ context.Context, _ string, p views.PreferencesData) error {
+	f.prefs = p
+	return nil
+}
+func (f *fakeStore) Nearby(context.Context, string, string, string) ([]views.TripView, error) {
+	return f.trips, nil
+}
+func (f *fakeStore) SharedTrip(context.Context, string) (views.SharedData, error) {
+	return views.SharedData{Trip: f.trips[0]}, nil
+}
+func (f *fakeStore) Insights(context.Context) (views.InsightView, error) {
+	return views.InsightView{Total: 3, Confirmations: 2}, nil
+}
+func (f *fakeStore) Activity(context.Context) ([]views.ActivityView, error) {
+	return []views.ActivityView{{Type: "booking.discovered", Summary: "Aerolíneas del Plata"}}, nil
+}
+func (f *fakeStore) IngestDemo(context.Context) error { f.ingested++; return nil }
+func (f *fakeStore) GeoPoints(context.Context) ([]views.GeoPoint, error) {
+	return []views.GeoPoint{
+		{TripName: "Buenos Aires → Madrid", Provider: "Aerolíneas del Plata", ProviderRef: "PNR-1930", Lat: -34.6037, Lon: -58.3816},
+		{TripName: "Buenos Aires → Madrid", Provider: "Hotel Presidente", ProviderRef: "HT-4471", Lat: -34.6200, Lon: -58.4200},
+	}, nil
+}
+func (f *fakeStore) Mailboxes(context.Context) ([]views.MailboxView, error) {
+	return []views.MailboxView{{ID: "m1", Provider: "gmail", Email: "dev@trotamundos.app"}}, nil
+}
+func (f *fakeStore) AddMailbox(context.Context, string, string) error    { return nil }
+func (f *fakeStore) Senders(context.Context) ([]views.SenderView, error) { return f.senders, nil }
+func (f *fakeStore) AddSender(_ context.Context, sender string) error {
+	f.senders = append(f.senders, views.SenderView{ID: "s2", Sender: sender})
+	return nil
+}
+func (f *fakeStore) RemoveSender(context.Context, string) error { return nil }
+
+func newHandlers() (*Handlers, *fakeStore) {
+	f := &fakeStore{
+		trips: []views.TripView{{ID: "abc123", Name: "Buenos Aires → Madrid", Status: "upcoming", Bookings: []views.BookingView{
+			{Type: "transport", Provider: "Aerolíneas del Plata", ProviderRef: "PNR-1930", Status: "confirmed"},
+		}}},
+		senders: []views.SenderView{{ID: "s1", Sender: "@aerolinea.com"}},
+	}
+	return &Handlers{Store: f}, f
+}
+
+func serve(h *Handlers, method, path, body string, cookie *http.Cookie) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	if body != "" {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	if cookie != nil {
+		req.AddCookie(cookie)
+	}
+	w := httptest.NewRecorder()
+	h.Handler().ServeHTTP(w, req)
+	return w
+}
+
+func TestPortadaSinJSON(t *testing.T) {
+	h, _ := newHandlers()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Accept", "application/json")
+	w := httptest.NewRecorder()
+	h.Handler().ServeHTTP(w, req)
+	body := w.Body.String()
+	for _, needle := range []string{"TROTAMUNDOS", "MCMXXX", "Buenos Aires → Madrid", `id="main-content"`, `/static/assets/htmx.min.js`} {
+		if !strings.Contains(body, needle) {
+			t.Errorf("falta %q", needle)
+		}
+	}
+	if strings.Count(body, `<script`) != 1 {
+		t.Error("solo debe cargarse la librería HTMX")
+	}
+	if w := serve(h, http.MethodGet, "/users/me/preferences", "", nil); w.Code != http.StatusNotFound {
+		t.Errorf("la ruta JSON de preferencias no debe existir: %d", w.Code)
+	}
+}
+
+func TestFragmentosYFormularios(t *testing.T) {
+	h, f := newHandlers()
+	w := serve(h, http.MethodGet, "/trips?status=upcoming", "", nil)
+	if strings.Contains(w.Body.String(), "<html") || !strings.Contains(w.Body.String(), `id="trip-list"`) {
+		t.Error("el fragmento debe traer solo #trip-list")
+	}
+	w = serve(h, http.MethodPost, "/trips", url.Values{"name": {"Nuevo viaje"}}.Encode(), nil)
+	if len(f.created) != 1 || !strings.Contains(w.Body.String(), "Nuevo viaje") {
+		t.Error("alta de viaje HTMX falló")
+	}
+	serve(h, http.MethodPost, "/bookings", url.Values{
+		"trip_id": {"abc123"}, "type": {"lodging"}, "provider": {"Hotel"}, "provider_ref": {"H-1"},
+	}.Encode(), nil)
+	if len(f.added) != 1 {
+		t.Error("alta de reserva HTMX falló")
+	}
+}
+
+func TestPaginasComponenHeaderFooter(t *testing.T) {
+	h, _ := newHandlers()
+	for _, path := range []string{"/trips/view", "/insights/view", "/map", "/mailboxes", "/whitelists", "/trips/abc123", "/nearby", "/shared/tok", "/login"} {
+		w := serve(h, http.MethodGet, path, "", nil)
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s: %d", path, w.Code)
+		}
+		if !strings.Contains(w.Body.String(), `<header class="site-header"`) || !strings.Contains(w.Body.String(), `class="site-footer"`) {
+			t.Errorf("%s no compone Header/Footer", path)
+		}
+	}
+}
+
+func TestSesionPorCookie(t *testing.T) {
+	h, _ := newHandlers()
+	w := serve(h, http.MethodPost, "/auth/login", url.Values{
+		"email": {"dev@trotamundos.app"}, "password": {"dev"},
+	}.Encode(), nil)
+	var cookie *http.Cookie
+	for _, c := range w.Result().Cookies() {
+		if c.Name == sessionCookie {
+			cookie = c
+		}
+	}
+	if cookie == nil || !cookie.HttpOnly || strings.Count(cookie.Value, ".") != 2 {
+		t.Fatalf("cookie de sesión incorrecta: %+v", cookie)
+	}
+	if !strings.Contains(serve(h, http.MethodGet, "/preferences", "", cookie).Body.String(), "Preferencias personales") {
+		t.Error("la cookie no autoriza preferencias")
+	}
+	if !strings.Contains(serve(h, http.MethodGet, "/preferences", "", nil).Body.String(), "Identifíquese") {
+		t.Error("sin cookie debe pedir login")
+	}
+	if strings.Count(cookie.Value, ".") != 2 {
+		t.Error("formato de cookie inválido")
+	}
+}
+
+func TestOperacionesHTMX(t *testing.T) {
+	h, f := newHandlers()
+	w := serve(h, http.MethodPost, "/whitelists", "sender=@nuevo.com", nil)
+	if len(f.senders) != 2 || !strings.Contains(w.Body.String(), "@nuevo.com") {
+		t.Error("whitelist HTMX falló")
+	}
+	if serve(h, http.MethodDelete, "/whitelists/s1", "", nil).Code != http.StatusOK {
+		t.Error("DELETE whitelist falló")
+	}
+	if !strings.Contains(serve(h, http.MethodPost, "/trips/abc123/share", "", nil).Body.String(), "/shared/tok") {
+		t.Error("compartir falló")
+	}
+	w = serve(h, http.MethodPost, "/demo/ingest", "", nil)
+	if f.ingested != 1 || !strings.Contains(w.Body.String(), `id="trip-list"`) {
+		t.Error("ingesta HTMX falló")
+	}
+}
+
+type fakeRenderer struct{ calls int }
+
+func (f *fakeRenderer) Render(context.Context, []views.GeoPoint) ([]byte, error) {
+	f.calls++
+	return []byte("PNG-FAKE"), nil
+}
+
+func TestMapaRealSinJS(t *testing.T) {
+	h, _ := newHandlers()
+	r := &fakeRenderer{}
+	h.MapRenderer = r
+	w := serve(h, http.MethodGet, "/map", "", nil)
+	body := w.Body.String()
+	for _, needle := range []string{`<img class="map-real"`, "/map/image", "OpenStreetMap", "go-staticmaps"} {
+		if !strings.Contains(body, needle) {
+			t.Errorf("falta %q en la página del mapa", needle)
+		}
+	}
+	if strings.Count(body, `<script`) != 1 {
+		t.Error("el mapa no debe añadir JavaScript")
+	}
+	w = serve(h, http.MethodGet, "/map/image", "", nil)
+	if w.Code != http.StatusOK || w.Body.String() != "PNG-FAKE" || w.Header().Get("Content-Type") != "image/png" {
+		t.Errorf("PNG del mapa incorrecto: %d %q", w.Code, w.Body.String())
+	}
+	if r.calls != 1 {
+		t.Error("el renderer no se invocó una vez")
+	}
+}
+
+func TestHTMXMantieneTituloYNavegacion(t *testing.T) {
+	h, _ := newHandlers()
+	req := httptest.NewRequest(http.MethodGet, "/mailboxes", nil)
+	req.Header.Set("HX-Request", "true")
+	w := httptest.NewRecorder()
+	h.Handler().ServeHTTP(w, req)
+	body := w.Body.String()
+	for _, needle := range []string{`hx-swap-oob="true"`, `id="site-nav"`, "Trotamundos · Buzones", "is-current"} {
+		if !strings.Contains(body, needle) {
+			t.Errorf("falta %q en la respuesta HTMX", needle)
+		}
+	}
+	if strings.Contains(body, "<html") {
+		t.Error("la respuesta HTMX no debe redibujar el documento completo")
+	}
+}

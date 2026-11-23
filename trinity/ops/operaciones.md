@@ -27,6 +27,10 @@
 | `assistance_cases_total` | counter | filius | casos por `reason`/`status`/`severity` (ADR-110) |
 | `assistance_tier1_resolution_ratio` | gauge | spiritus | ratio de resolución sin agencia (QA-17, desde `assistance.*`) |
 
+### Bus de eventos (Fase 0)
+- Filius publica en **NATS JetStream** cuando `NATS_URL` está definida (en `docker compose`); Spiritus consume `booking.>` y `trip.>` con consumidores durables y ack manual. Sin `NATS_URL` se usa el adaptador HTTP del prototipo.
+- Streams creados por la aplicación: `TRIPS`, `BOOKINGS`, `NOTIFICATIONS`, `ASSISTANCE` (retención 30 días, `FileStorage`).
+
 ### Tracing
 - OpenTelemetry Go SDK → OTLP (Fase 1: Grafana Tempo/Jaeger).
 - Cada request y evento arrastra `trace_id`/`span_id`; el `correlation_id` se propaga como atributo.

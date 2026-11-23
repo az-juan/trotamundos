@@ -43,6 +43,7 @@
 - Servicio Identity independiente (JWT emitido por el Gateway de Pater; Fase 2).
 - Migración NATS → Kafka (solo si se cumple 2-de-3, ADR-103).
 - Extracción de Notification como servicio (Fase 1, como módulo de Spiritus).
+- API JSON, BFF móvil, JWT/JWKS y clientes HTTP internos en el prototipo Fase 0: los handlers usan sqlc directo, HTMX y cookie firmada (ADR-111).
 - Proveedor de LLM o plataforma de chatbot gestionada en Fase 0: el Asistente Virtual se habilita en **Fase 1** detrás del puerto `IntentClassifier`, con fallback determinista y coste monitorizado (ADR-109).
 
 ## 7. Disparadores para revisar estas restricciones

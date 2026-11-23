@@ -32,6 +32,7 @@ END
 $$;
 
 REVOKE ALL ON SCHEMA public, pater, filius, spiritus FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO pater_app, filius_app, spiritus_app; -- pgcrypto.crypt (ADR-111)
 GRANT USAGE, CREATE ON SCHEMA pater TO pater_app;
 GRANT USAGE, CREATE ON SCHEMA filius TO filius_app;
 GRANT USAGE, CREATE ON SCHEMA spiritus TO spiritus_app;
@@ -199,9 +200,44 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA pater TO pater_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA filius TO filius_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA spiritus TO spiritus_app;
 
+-- ADR-111: el prototipo web usa sqlc desde Pater sobre el esquema compartido.
+GRANT USAGE ON SCHEMA filius, spiritus TO pater_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA filius TO pater_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA spiritus TO pater_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA pater TO filius_app;
+
 ALTER DEFAULT PRIVILEGES IN SCHEMA pater GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO pater_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA filius GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO filius_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA spiritus GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO spiritus_app;
+
+
+-- -----------------------------------------------------------------------------
+-- 8. Datos de demostración del prototipo HTMX/sqlc (ADR-111)
+-- -----------------------------------------------------------------------------
+INSERT INTO filius.trips (id, user_id, name, status, start_date, end_date)
+VALUES
+  ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000001', 'Buenos Aires → Madrid', 'upcoming', CURRENT_DATE + 12, CURRENT_DATE + 19),
+  ('22222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000001', 'Escapada a Montevideo', 'upcoming', NULL, NULL)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO filius.bookings (trip_id, type, status, provider, provider_ref, details)
+VALUES
+  ('11111111-1111-1111-1111-111111111111', 'transport', 'confirmed', 'Aerolíneas del Plata', 'PNR-1930', '{"lat":-34.5901,"lon":-58.3748,"destination":"MAD"}'),
+  ('11111111-1111-1111-1111-111111111111', 'lodging', 'confirmed', 'Hotel Presidente', 'HT-4471', '{"lat":-34.6074,"lon":-58.3720}'),
+  ('22222222-2222-2222-2222-222222222222', 'transport', 'confirmed', 'Ferrocarril del Este', 'TR-2210', '{"lat":-34.6285,"lon":-58.3683}')
+ON CONFLICT (provider, provider_ref) DO NOTHING;
+
+INSERT INTO filius.travelers (trip_id, name, document, email)
+VALUES ('11111111-1111-1111-1111-111111111111', 'Ana Ruiz', '12345678Z', 'ana@example.com');
+
+INSERT INTO spiritus.whitelist_senders (user_id, sender)
+VALUES ('00000000-0000-0000-0000-000000000001', '@aerolineasdelplata.com'),
+       ('00000000-0000-0000-0000-000000000001', '@hotelpresidente.com')
+ON CONFLICT (user_id, sender) DO NOTHING;
+
+INSERT INTO spiritus.mailboxes (user_id, provider, email)
+VALUES ('00000000-0000-0000-0000-000000000001', 'gmail', 'dev@trotamundos.app')
+ON CONFLICT (user_id, email) DO NOTHING;
 
 -- -----------------------------------------------------------------------------
 -- 7. Seed de desarrollo local (usuario dev@trotamundos.app)

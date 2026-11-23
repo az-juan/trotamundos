@@ -1,6 +1,6 @@
 ```mermaid
 graph LR
-    CLIENT["Web / Mobile / Terceros"] -->|"REST (JWT RS256)"| PATER["🕊️ PATER<br/>Gateway · Web BFF · Mobile BFF"]
+    CLIENT["Navegador"] -->|"HTTPS + cookie firmada"| PATER["🕊️ PATER<br/>Web BFF SSR · templ/HTMX · sqlc"]
 
     PATER -->|"REST interno (en proceso)"| WEB["web-bff<br/>HTML/htmx"]
     PATER -->|"REST interno (en proceso)"| MOB["mobile-bff<br/>JSON"]
@@ -15,7 +15,7 @@ graph LR
     SPIRITUS -. "consume / re-publica" .-> NATS
 
     %% Arista Spiritus -> Pater (read-model / SSE)
-    SPIRITUS -->|"read-model (insights) · SSE (notificaciones)"| PATER
+    SPIRITUS -->|"read-model (referencia Fase 1); Fase 0: PG + sqlc"| PATER
 
     %% Externos
     FILIUS <-->|"REST resiliente (en proceso hacia out)"| EXT["Aerolíneas · Hoteles · Rentadoras"]
@@ -38,6 +38,9 @@ graph LR
     style AG fill:#3a1a1a,stroke:#f44336,color:#fff
 ```
 
+> **ADR-111 (prototipo Fase 0):** la arista REST `Pater↔Filius` del triángulo queda como **contrato de referencia**; en la ejecución real los handlers de Pater consultan PostgreSQL con **sqlc** directamente. NATS sigue solo en `Filius↔Spiritus`.
+
+
 ## Propósito de esta vista (component-and-connector, Bass ch.1/22)
 
 Vista de **Componentes y Conectores (C&C)**: estructura de **runtime**. Muestra **cómo interactúan los
@@ -45,11 +48,11 @@ componentes dinámicamente** para ejecutar los escenarios del sistema. La dispos
 las tres unidades conectadas dos a dos, y **cada arista usa un conector distinto** (es la perspectiva en
 runtime del *triángulo trinitario* de `vista_modulos.md`):
 
-- **Pater ↔ Filius — REST (síncrono, request-response).** Cliente → Gateway → BFF → módulos de Filius.
+- **Pater ↔ Filius — REST (referencia Fase 1).** En Fase 0 el handler consulta PostgreSQL con sqlc (ADR-111).
   Dentro de Filius, Itinerary↔Integration se llaman **en proceso** (sin red).
 - **Filius ↔ Spiritus — NATS JetStream (asíncrono, event-driven).** Propagación de hechos; cada
   consumidor reacciona por su cuenta (invertir responsabilidad, Newman ch.4).
-- **Spiritus ↔ Pater — read-model / SSE.** El Rostro lee proyecciones analíticas y empuja
+- **Spiritus ↔ Pater — read-model / SSE (referencia Fase 1).** En Fase 0 el Rostro lee insights con sqlc;
   notificaciones; **sin pasar por el Núcleo OLTP** (CQRS; protege QA-15).
 
 > **Arista inexistente a propósito:** no hay NATS entre Pater y el cliente, ni REST síncrono
@@ -90,7 +93,7 @@ sequenceDiagram
     participant R as Redis / PostgreSQL
     U->>NG: GET /trips/123 (HTTPS)
     NG->>G: proxy
-    G->>G: validar JWT RS256 (JWKS) + rate limit
+    G->>G: validar cookie firmada + rate limit
     G->>WB: route (X-Correlation-ID) (en proceso dentro de Pater)
     WB->>IT: GET booking/trip 123 (REST a Filius)
     IT->>R: lectura (cache → PG)

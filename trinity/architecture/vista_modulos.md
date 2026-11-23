@@ -4,7 +4,7 @@ graph TB
 
     GW["go.work — workspace Go<br/>(una sola sustancia: construye las 3 unidades + shared)"]
 
-    GW --> P["🕊️ units/pater/ — módulo Go<br/>Gateway · Web BFF · Mobile BFF · Assistant (Fase 1)"]
+    GW --> P["🕊️ units/pater/ — módulo Go<br/>Web BFF SSR · sqlc · cookie (Fase 0)<br/>Mobile BFF · Assistant (Fase 1)"]
     GW --> F["✝️ units/filius/ — módulo Go<br/>Itinerary · Integration · Assistance (Fase 1)"]
     GW --> S["🔥 units/spiritus/ — módulo Go<br/>Email Ingest · Analytics"]
     GW --> SH["shared/ — contratos y andamiaje<br/>(solo lo estable: eventos, resilient, otel, config, idgen)"]
@@ -31,6 +31,9 @@ graph TB
     class HEX hex;
 ```
 
+> **ADR-111 (prototipo Fase 0):** la arista REST `Pater↔Filius` del triángulo queda como **contrato de referencia**; en la ejecución real los handlers de Pater consultan PostgreSQL con **sqlc** directamente. NATS sigue solo en `Filius↔Spiritus`.
+
+
 ## El triángulo trinitario — las tres unidades interconectadas
 
 > *Una sola sustancia, tres personas.* Las tres unidades forman un **triángulo**: cada par está
@@ -41,13 +44,13 @@ graph TB
 
 ```mermaid
 graph TD
-    P["🕊️ PATER — Facade<br/>Gateway · Web BFF · Mobile BFF<br/>(per-request · latencia)"]
+    P["🕊️ PATER — Facade<br/>Web BFF SSR · sqlc · cookie (Fase 0)<br/>Mobile BFF (Fase 1)"]
     F["✝️ FILIUS — Núcleo<br/>Itinerary · Integration<br/>(per-request · OLTP)"]
     S["🔥 SPIRITUS — Mente<br/>Email Ingest · Analytics<br/>(batch · OLAP)"]
 
-    P <-->|"REST · OpenAPI<br/>(síncrono · JWT RS256)"| F
+    P <-->|"REST · OpenAPI (referencia Fase 1)<br/>Fase 0: PG + sqlc"| F
     F <-->|"NATS JetStream<br/>(eventos ricos · async)"| S
-    S <-->|"read-model · SSE<br/>(insights · notificaciones)"| P
+    S <-->|"read-model · SSE (referencia Fase 1)<br/>Fase 0: PG + sqlc"| P
 
     classDef p fill:#2d2d44,stroke:#7c6ff7,color:#fff;
     classDef f fill:#1a3a2a,stroke:#4caf50,color:#fff;
@@ -59,9 +62,9 @@ graph TD
 
 | Arista | Conector (contrato) | Qué cruza la arista | Por qué este conector |
 |--------|---------------------|---------------------|----------------------|
-| **Pater ↔ Filius** | REST · OpenAPI (síncrono) | Cliente necesita el resultado ya (itinerarios, reservas) | Baja latencia (QA-6 / QA-7) |
+| **Pater ↔ Filius** | REST · OpenAPI (referencia Fase 1); en Fase 0 Pater → PG con sqlc | Itinerarios y reservas | Baja latencia (QA-6 / QA-7) |
 | **Filius ↔ Spiritus** | NATS JetStream (async) | Hechos de negocio (`booking.*`, `trip.*`) | Desacople de picos; cada consumidor reacciona (QA-3 / QA-5) |
-| **Spiritus → Pater** | read-model · SSE | Insights y notificaciones (proyecciones analíticas) | CQRS: analítica sin tocar el OLTP (QA-15) |
+| **Spiritus → Pater** | read-model · SSE (referencia Fase 1); en Fase 0 Pater lee el esquema `spiritus` con sqlc | Insights y analítica | CQRS: analítica sin tocar el OLTP (QA-15) |
 
 > **Asistente Virtual (Fase 1, ADR-109/110):** `assistant/` se añade **dentro de Pater** y `assistance/`
 > **dentro de Filius**. No hay cuarta unidad ni cuarta arista: el chat usa `Pater↔Filius` (REST) para

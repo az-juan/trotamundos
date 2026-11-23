@@ -3,10 +3,9 @@ info:
   title: Trotamundos API (Pater - Gateway + BFFs)
   version: 0.1.0
   description: >
-    Contrato de la unidad Pater (Gateway + Web BFF + Mobile BFF). Es la unica superficie
-    expuesta al borde (atras de Nginx/TLS). Pater valida JWT RS256, aplica rate limit y
-    delega en Filius (REST interno) y en el read-model de Spiritus. Fuente de verdad del
-    estilo SDD: los tipos Go se generan con oapi-codegen.
+    Contrato de referencia DIFERIDO a Fase 1 (ADR-111). En el prototipo Fase 0 NO se expone
+    API JSON: los handlers de Pater consultan PostgreSQL con sqlc y renderizan HTML/HTMX,
+    con sesion en cookie firmada. Mobile BFF, JWT RS256 y JWKS se reintroducen en Fase 1.
   contact: { name: Trotamundos Architecture, url: "https://github.com/az-juan/trotamundos" }
 
 servers:

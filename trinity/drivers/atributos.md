@@ -25,7 +25,7 @@
 - QA-10: Restringir el compartir itinerario con otros usuarios aplicando permisos de visualización.
 ---
 ## Usabilidad:
-- QA-13: Interfaz simple y sencilla, pero funcional. Incluye geolocalización (GPS) en móvil para mostrar reservas cercanas al viajero y deep-linking a apps de terceros (FR-6). Implementado en Pater (Mobile BFF) consumiendo la posición del dispositivo (permiso explícito, solo en foreground).
+- QA-13: Interfaz simple y sencilla, pero funcional. Incluye geolocalización para mostrar reservas cercanas al viajero y deep-linking a apps de terceros (FR-6). En Fase 0 se implementa en la **web** mediante el formulario `/nearby` (coordenadas explícitas) y el **mapa real SSR** `/map` (PNG con `go-staticmaps`/OSM, marcadores y trazas, sin JavaScript; ADR-111). El GPS de móvil vuelve en Fase 1.
 - QA-14: Opciones Web y móvil.
 ---
 ## Testeabilidad:

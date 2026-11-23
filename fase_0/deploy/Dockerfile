@@ -5,12 +5,18 @@
 # Deriva de: ADR-003 (Go 1.23 estático), ADR-102 (monorepo go.work), ADR-105
 # =============================================================================
 
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 WORKDIR /workspace
 
 RUN apk add --no-cache git ca-certificates tzdata
 
 COPY go.work* ./
+COPY shared/go.mod ./shared/
+COPY units/pater/go.mod ./units/pater/
+COPY units/filius/go.mod ./units/filius/
+COPY units/spiritus/go.mod ./units/spiritus/
+RUN go mod download
+
 COPY shared/ ./shared/
 COPY units/ ./units/
 
@@ -26,6 +32,7 @@ WORKDIR /app
 
 FROM runtime-base AS pater
 COPY --from=builder /out/pater /app/pater
+COPY --from=builder /workspace/units/pater/static /app/static
 EXPOSE 8080
 ENTRYPOINT ["/app/pater"]
 

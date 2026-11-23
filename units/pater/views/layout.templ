@@ -1,0 +1,28 @@
+package views
+
+templ Layout(title string, active string, signedIn bool, content templ.Component) {
+	<!DOCTYPE html>
+	<html lang="es">
+		<head>
+			<meta charset="utf-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1" />
+			<title>{ title }</title>
+			<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23335C67%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 text-anchor=%27middle%27 fill=%27%23E09F3E%27%3E%E2%9C%A6%3C/text%3E%3C/svg%3E" />
+			<link rel="stylesheet" href="/static/css/base.css" />
+			<script src="/static/assets/htmx.min.js"></script>
+		</head>
+		<body>
+			@Header(active, signedIn)
+			<main id="main-content">
+				@content
+			</main>
+			@Footer()
+		</body>
+	</html>
+}
+
+// HTMXResponse mantiene consistentes título y navegación cuando HTMX reemplaza solo #main-content.
+templ HTMXResponse(title string, active string, signedIn bool, content templ.Component) {
+	@HTMXChrome(title, active, signedIn)
+	@content
+}

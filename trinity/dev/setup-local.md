@@ -39,7 +39,7 @@ Copiar `fase_0/.env.example` a `fase_0/deploy/.env` y ajustar. Variables mínima
 |----------|--------|-------------|
 | `PATER_PG_DSN` | pater | DSN a PostgreSQL con rol `pater_app` (esquema `pater`, ADR-108) |
 | `PATER_REDIS_URL` | pater | `redis://localhost:6379/0` |
-| `JWT_PRIVATE_KEY_FILE` | pater | Ruta a la clave privada RS256 |
+| `SESSION_SECRET` | pater | Clave HMAC de la cookie de sesión (Fase 0; en Fase 1 se sustituye por OIDC) |
 | `FILIUS_PG_DSN` | filius | DSN a PostgreSQL con rol `filius_app` (esquema `filius`, ADR-108) |
 | `FILIUS_REDIS_URL` | filius | `redis://localhost:6379/1` |
 | `NATS_URL` | filius/spiritus | `nats://localhost:4222` |
@@ -56,15 +56,13 @@ Ver `fase_0/.env.example` completo.
 ```bash
 cd deploy
 docker compose up -d postgres redis nats
-# PostgreSQL managed en Fase 0; en local usamos el contenedor postgres del compose
+# En local usamos el contenedor PostgreSQL del compose; `init.sql` crea esquemas, roles, seeds y grants
 ```
 
 Aplicar migraciones:
 
 ```bash
-migrate -path migrations/filius -database "$FILIUS_PG_DSN" up
-migrate -path migrations/spiritus -database "$SPIRITUS_PG_DSN" up
-migrate -path migrations/pater -database "$PATER_PG_DSN" up
+docker compose exec -T postgres psql -U trotamundos -d trotamundos -f /dev/stdin < fase_0/deploy/postgres/init.sql
 ```
 
 ## 5. Correr las unidades
@@ -78,7 +76,7 @@ cd units/filius && go run ./cmd/filius   # :8081
 # Terminal 2 — Spiritus
 cd units/spiritus && go run ./cmd/spiritus # :8082
 
-# Terminal 3 — Pater (depende de Filius)
+# Terminal 3 — Pater (depende de PostgreSQL con `PATER_PG_DSN`, no de Filius en Fase 0)
 cd units/pater && go run ./cmd/pater       # :8080
 ```
 
@@ -145,6 +143,44 @@ oapi-codegen -config units/pater/internal/gateway/oapi-codegen.yaml fase_0/docs/
 - **Filius no arranca**: verificar `FILIUS_PG_DSN` y que las migraciones se aplicaron.
 - **Pater devuelve 502**: Filius no responde → verificar que Filius está up y el timeout (ADR-103).
 - **NATS sin JetStream**: asegurar `command: ["-js"]` en el servicio nats del compose.
-- **JWT inválido**: verificar que la clave privada de Pater coincide con el JWKS publicado en `/.well-known/jwks.json`.
+- **Sesión inválida**: verificar `SESSION_SECRET` y que la cookie `trotamundos_session` no esté vencida (ADR-111).
+
+## 12. Despliegue completo con Docker Compose
+
+```bash
+cd fase_0/deploy
+docker compose up -d --build      # construye 3 imágenes Go y levanta 7 servicios
+docker compose ps                 # salud de nginx/pater/filius/spiritus/nats/redis/postgres
+curl http://localhost:8088/healthz
+```
+
+- La interfaz se sirve en **`http://localhost:8088`** (Nginx → Pater); Pater también está expuesto en `:8090`.
+- Los puertos host se pueden cambiar con `NGINX_HTTP_PORT`, `NGINX_HTTPS_PORT`, `PATER_HOST_PORT` y `POSTGRES_HOST_PORT`.
+- `env_file` es opcional: si no existe `fase_0/deploy/.env`, la aplicación usa valores por defecto.
+- Verificación funcional: abrir el panel, pulsar **Buzones** y **Simular correo**; Spiritus publica
+  `booking.discovered`, Filius crea la reserva y Pater actualiza el boletín y el listado con swaps OOB.
+- Sin API JSON (ADR-111): los handlers consultan PostgreSQL con **sqlc** y renderizan HTML/HTMX. Las consultas viven en `db/queries/*.sql` y el código generado en `shared/db/`.`PATER_PG_DSN` es obligatorio.
+- Mapa: `/map/image` genera un PNG real con `go-staticmaps` + teselas OSM en caché desde `db/queries/trips.sql` (`ListGeoPoints`); requiere `lat`/`lon` en `filius.bookings.details`.
+- Vistas disponibles: `/`, `/trips/view`, `/trips/{id}`, `/insights/view`, `/mailboxes`, `/whitelists`,
+  `/preferences`, `/shared/{token}`, `/nearby` y `/login`. Autenticación por cookie firmada
+  (demo: `dev@trotamundos.app` / `dev`).
+
+## 11. Prototipo ejecutable (MVP Fase 0 — CON-4)
+
+Pater usa PostgreSQL real mediante sqlc; Filius y Spiritus conservan adaptadores en memoria y NATS para el bus asíncrono. Las tres unidades se levantan con un solo comando.
+
+```bash
+./scripts/test.sh                # templ generate + go test ./... en shared, filius, spiritus y pater
+./scripts/run.sh                 # Filius :8081, Spiritus :8082, Pater :8090
+PATER_PORT=8091 ./scripts/run.sh # si :8090 está ocupada por otro proyecto local
+```
+
+- **Pater** sirve la interfaz en `http://localhost:8090`: HTML con `templ`, estilos en `units/pater/static/css/base.css`
+  (CSS Grid + Flexbox) y `htmx.min.js` servido localmente desde `units/pater/static/assets/`.
+- **Sin JavaScript propio**: filtros, formularios y botones usan `hx-get`/`hx-post` con `hx-target` y swaps OOB.
+- Flujo de demostración: pulsar **Simular correo** → Spiritus parsea el correo y publica `booking.discovered`
+  hacia Filius → Filius crea la reserva y publica `booking.confirmed` → Pater refresca el boletín y el listado.
+- Las preferencias de carga son **volátiles**: al reiniciar vuelven las dos reservas semilla. La persistencia real
+  (PostgreSQL con RBAC por esquema, Redis y NATS JetStream) sigue siendo el objetivo del despliegue `fase_0/deploy/`.
 
 > Ver también: `trinity/units/01-arquitectura-global.md` (layout del monorepo) y `trinity/vista_despliegue.md` (infra).

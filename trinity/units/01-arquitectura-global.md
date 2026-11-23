@@ -45,7 +45,7 @@ trotamundos/
 ├── units/
 │   ├── pater/                    # module github.com/trotamundos/pater
 │   │   ├── go.mod
-│   │   ├── cmd/pater/main.go     # deployable: Gateway + Web BFF + Mobile BFF
+│   │   ├── cmd/pater/main.go     # deployable: Web BFF SSR + sqlc (Fase 0)
 │   │   └── internal/
 │   │       ├── gateway/          # Chi + oapi-codegen (router, auth, rate limit, proxy)
 │   │       ├── web-bff/          # templ + htmx + Tailwind (HTML)
@@ -164,14 +164,14 @@ elegido por la naturaleza de la interacción (Newman ch.4: *communication styles
 
 | Arista | Conector | Por qué |
 |--------|----------|---------|
-| **Pater ↔ Filius** | REST · OpenAPI (síncrono, JWT RS256, timeout) | El cliente necesita el resultado ya (QA-6/QA-7) |
+| **Pater ↔ Filius** | REST · OpenAPI (referencia Fase 1); en Fase 0 Pater → PG con sqlc | El cliente necesita el resultado ya (QA-6/QA-7) |
 | **Filius ↔ Spiritus** | NATS JetStream (eventos ricos, async) | Propagar hechos; cada consumidor reacciona (QA-3, QA-5) |
 | **Spiritus → Pater** | read-model (API) + SSE | Mostrar insights/notificaciones sin tocar el OLTP (QA-15, CQRS) |
 
 ```mermaid
 graph LR
     subgraph "Síncrono (request-response)"
-        C["Web/Mobile/Terceros"] -->|"REST (JWT RS256)"| P["Pater (Gateway)"]
+        C["Navegador"] -->|"HTTPS + cookie firmada"| P["Pater (Web BFF + sqlc)"]
         P -->|"REST a Filius (en la red Docker)"| F["Filius"]
     end
     subgraph "Asíncrono (event-driven · solo esta arista)"
@@ -232,7 +232,7 @@ graph LR
 
 | Unidad | Esquema PG | Cache | Publica (NATS) | Consume (NATS) | Cliente externo |
 |--------|-----------|-------|----------------|----------------|-----------------|
-| **Pater** | (solo lectura de read-model de Spiritus) | Redis (rate limit/JWT/sesiones) | — | — | proxy a Filius; BFFs a Filius |
+| **Pater** | lectura sqlc de `filius`/`spiritus` (ADR-111) | Redis previsto para Fase 1 | — | — | sin clientes HTTP internos en Fase 0 |
 | **Filius** | `filius` (escribe) | Redis (idempotencia) | `booking.confirmed/cancelled/disrupted`, `trip.*` | `booking.discovered` | Aerolíneas/hoteles/rentadoras (resiliente) |
 | **Spiritus** | `spiritus` (escribe) | Redis (dedup) | `booking.discovered` | `booking.*`, `trip.*` | Gmail API, IMAP |
 

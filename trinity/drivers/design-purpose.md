@@ -5,8 +5,7 @@
 ## 1. Visión
 
 Construir la **próxima generación de un panel de gestión de viajes en línea** que permita a los viajeros
-ver todas sus reservas existentes organizadas por viaje, ya sea a través de la web o desde su dispositivo
-móvil. El objetivo es ofrecer un **único punto de verdad** para todos los arreglos de viaje (hoteles,
+ver todas sus reservas existentes organizadas por viaje. El prototipo Fase 0 atiende el canal **web**; el móvil se reintroduce en Fase 1 con BFF JSON (ADR-111). El objetivo es ofrecer un **único punto de verdad** para todos los arreglos de viaje (hoteles,
 autos, vuelos, trenes, autobuses) en una interfaz simple centrada en el viaje, mitigando la frustración
 de rastrear múltiples aplicaciones y bandejas de correo.
 
@@ -29,6 +28,7 @@ de rastrear múltiples aplicaciones y bandejas de correo.
 8. **Analítica y monetización** de datos agregados/anónimos (FR-7, FR-9).
 9. **Acceso seguro** a correos del usuario (QA-9).
 10. **Asistente Virtual** (Fase 1): soporte de primer nivel para reprogramaciones guiadas, consultas de estado e incidencias menores, con derivación de casos complejos a la agencia preferida (FR-10, FR-11, ADR-109/110).
+11. **Mapa de viajes** (Fase 0): visualización cartográfica de reservas y rutas en el panel web, renderizada en el servidor (FR-12, ADR-112).
 
 ## 4. Actores
 
@@ -41,7 +41,8 @@ de rastrear múltiples aplicaciones y bandejas de correo.
 ## 5. Alcance y límites
 
 - **En scope (Fase 0):** captura por email, agrupación por viaje, gestión manual, integración con
-  proveedores, compartición, web + móvil (PWA/native), analítica básica, geolocalización (GPS) en móvil.
+  proveedores, compartición, **panel web HTMX/sqlc** (prototipo), analítica básica. El canal móvil
+  nativo se difiere a Fase 1 junto con el BFF JSON y JWT/OIDC (ADR-111).
 - **Fuera de scope (Fase 0):** pagos, reservas nuevas (solo lectura/gestión de existentes), **chat — se provee como Asistente Virtual en Fase 1 (FR-10/FR-11, ADR-109/110), no en el MVP—**, notificaciones push nativas (Fase 1), identidad independiente (Fase 2).
 - **Plataforma:** web (responsive) + iOS (Swift/SwiftUI) + Android (Kotlin/Compose).
 

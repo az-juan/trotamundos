@@ -5,7 +5,7 @@
 services:
   nginx:
     image: nginx:1.25
-    ports: ["80:80", "443:443"]
+    ports: ["${NGINX_HTTP_PORT:-8088}:80", "${NGINX_HTTPS_PORT:-8443}:443"]
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/certs:/etc/nginx/certs:ro
@@ -19,12 +19,17 @@ services:
       timeout: 5s
       retries: 3
 
-  pater:        # 🕊️ Gateway + Web BFF + Mobile BFF (un binario Go)
-    build: { context: .., dockerfile: fase_0/deploy/Dockerfile, target: pater }
-    env_file: .env
+  pater:        # 🕊️ Web BFF SSR + sqlc + HTMX (un binario Go)
+    build: { context: ../.., dockerfile: fase_0/deploy/Dockerfile, target: pater }
+    env_file:
+      - path: .env
+        required: false
     environment:
       - PATER_PORT=8080
-    ports: ["8080:8080"]
+      - PATER_PG_DSN=postgres://pater_app:pater_dev@postgres:5432/trotamundos?sslmode=disable
+      - FILIUS_URL=http://filius:8081
+      - SPIRITUS_URL=http://spiritus:8082
+    ports: ["${PATER_HOST_PORT:-8090}:8080"]
     depends_on:
       filius:
         condition: service_healthy
@@ -39,10 +44,14 @@ services:
       start_period: 10s
 
   filius:       # ✝️ Itinerary + Integration (un binario Go)
-    build: { context: .., dockerfile: fase_0/deploy/Dockerfile, target: filius }
-    env_file: .env
+    build: { context: ../.., dockerfile: fase_0/deploy/Dockerfile, target: filius }
+    env_file:
+      - path: .env
+        required: false
     environment:
       - FILIUS_PORT=8081
+      - SPIRITUS_URL=http://spiritus:8082
+      - NATS_URL=nats://nats:4222
     ports: ["8081:8081"]
     depends_on:
       nats:
@@ -58,10 +67,14 @@ services:
       start_period: 10s
 
   spiritus:     # 🔥 Email Ingest + Analytics (un binario Go)
-    build: { context: .., dockerfile: fase_0/deploy/Dockerfile, target: spiritus }
-    env_file: .env
+    build: { context: ../.., dockerfile: fase_0/deploy/Dockerfile, target: spiritus }
+    env_file:
+      - path: .env
+        required: false
     environment:
       - SPIRITUS_PORT=8082
+      - FILIUS_URL=http://filius:8081
+      - NATS_URL=nats://nats:4222
     ports: ["8082:8082"]
     depends_on:
       nats:
@@ -106,7 +119,7 @@ services:
       POSTGRES_USER: trotamundos
       POSTGRES_PASSWORD: dev
       POSTGRES_DB: trotamundos
-    ports: ["5432:5432"]
+    ports: ["${POSTGRES_HOST_PORT:-55432}:5432"]
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro

@@ -1,0 +1,224 @@
+package views
+
+templ TripsPage(data DashboardData) {
+	<div class="page-shell narrow">
+		@PageHeading("Itinerarios", "Todos sus viajes", fmtInt(len(data.Trips)) + " expedientes")
+		@TripList(data.Trips, data.Active)
+	</div>
+}
+
+templ TripDetailPage(data TripDetailData) {
+	<div class="page-shell narrow">
+		@PageHeading("Expediente", data.Trip.Name, StatusLabel(data.Trip.Status))
+		@Notice(data.Notice)
+		<div class="detail-grid">
+			<div>
+				@Panel("Reservas del viaje", TripTicket(data.Trip, false))
+				@Panel("Compartir itinerario", ShareForm(data.Trip.ID))
+			</div>
+			<aside class="right-rail">
+				@Panel("Viajeros", TravelerList(data.Travelers))
+				@Panel("Operaciones", TripActions(data.Trip.ID))
+			</aside>
+		</div>
+	</div>
+}
+
+templ TravelerList(items []TravelerView) {
+	<ul class="data-list">
+		if len(items) == 0 {
+			<li class="booking-empty">Sin viajeros asignados.</li>
+		}
+		for _, t := range items {
+			<li><strong>{ t.Name }</strong> <span>{ t.Document }</span></li>
+		}
+	</ul>
+}
+
+templ ShareForm(tripID string) {
+	<form class="vintage-form" hx-post={ "/trips/" + tripID + "/share" } hx-target="#share-result" hx-swap="innerHTML">
+		<input type="hidden" name="trip_id" value={ tripID } />
+		@SubmitButton("Generar enlace de solo lectura", "btn-brass")
+	</form>
+	<div id="share-result"></div>
+}
+
+templ TripActions(tripID string) {
+	<div class="action-stack">
+		<button class="btn" type="button" hx-post={ "/trips/" + tripID + "/archive" } hx-target="#main-content" hx-swap="innerHTML">Archivar viaje</button>
+		<button class="btn ghost" type="button" hx-get={ "/nearby?trip=" + tripID } hx-target="#main-content" hx-swap="innerHTML">Ver cercanías (GPS)</button>
+	</div>
+}
+
+templ InsightsPage(data InsightPageData) {
+	<div class="page-shell narrow">
+		@PageHeading("Spiritus", "Boletín de la Mente", "FR-7 · QA-15")
+		<section id="insights-stats" class="panel" hx-get="/insights" hx-trigger="every 5s" hx-swap="innerHTML">
+			@Stats(data.Insights)
+			<p class="rail-footnote">Último registro: { data.Insights.LastEventAt }</p>
+		</section>
+		@Panel("Correo y eventos recientes", Timeline(data.Activity))
+	</div>
+}
+
+templ MailboxesPage(items []MailboxView, notice string) {
+	<div class="page-shell narrow">
+		@PageHeading("Spiritus", "Buzones conectados", "FR-2 · QA-9")
+		@Notice(notice)
+		@Panel("Vincular buzón", ConnectMailboxForm())
+		@Panel("Buzones", MailboxList(items))
+	</div>
+}
+
+templ ConnectMailboxForm() {
+	<form class="vintage-form" hx-post="/mailboxes" hx-target="#main-content" hx-swap="innerHTML">
+		<div class="field-row">
+			<label class="field"><span>Proveedor</span>
+				<select name="provider"><option value="gmail">Gmail</option><option value="imap">IMAP</option></select>
+			</label>
+			@Field("Correo", "email", "", "viajero@trotamundos.app", "email", true)
+		</div>
+		@SubmitButton("Vincular", "btn-brass")
+	</form>
+}
+
+templ MailboxList(items []MailboxView) {
+	<ul class="data-list">
+		if len(items) == 0 {
+			<li class="booking-empty">No hay buzones vinculados.</li>
+		}
+		for _, m := range items {
+			<li><strong>{ m.Email }</strong> <span>{ m.Provider }</span></li>
+		}
+	</ul>
+}
+
+templ WhitelistsPage(items []SenderView, notice string) {
+	<div class="page-shell narrow">
+		@PageHeading("Spiritus", "Remitentes seguros", "FR-3 · QA-9")
+		@Notice(notice)
+		@Panel("Agregar remitente", AddSenderForm())
+		@Panel("Lista blanca", SenderList(items))
+	</div>
+}
+
+templ AddSenderForm() {
+	<form class="vintage-form" hx-post="/whitelists" hx-target="#main-content" hx-swap="innerHTML">
+		@Field("Dominio o correo", "sender", "", "@aerolinea.com", "text", true)
+		@SubmitButton("Autorizar", "btn-brass")
+	</form>
+}
+
+templ SenderList(items []SenderView) {
+	<ul class="data-list">
+		if len(items) == 0 {
+			<li class="booking-empty">No hay remitentes autorizados.</li>
+		}
+		for _, s := range items {
+			<li>
+				<strong>{ s.Sender }</strong>
+				<button class="del-link" type="button" hx-delete={ "/whitelists/" + s.ID } hx-target="closest li" hx-swap="outerHTML">Quitar</button>
+			</li>
+		}
+	</ul>
+}
+
+templ PreferencesPage(p PreferencesData, notice string) {
+	<div class="page-shell narrow">
+		@PageHeading("Viajero", "Preferencias personales", "ADR-106")
+		@Notice(notice)
+		@Panel("Datos del expediente", PreferencesForm(p))
+	</div>
+}
+
+templ PreferencesForm(p PreferencesData) {
+	<form class="vintage-form" hx-post="/preferences" hx-target="#main-content" hx-swap="innerHTML">
+		@Field("Idioma", "locale", p.Locale, "", "select", false)
+		@Field("Moneda", "currency", p.Currency, "USD", "text", true)
+		@Field("Radio GPS (km)", "gps_radius_km", p.GpsRadius, "50", "number", false)
+		@Field("Agencia preferida", "preferred_agency_id", p.PreferredAgency, "ID de la agencia", "text", false)
+		@SubmitButton("Guardar preferencias", "btn-brass")
+	</form>
+}
+
+templ SharedPage(data SharedData) {
+	<div class="page-shell narrow">
+		@PageHeading("Itinerario compartido", data.Trip.Name, "Solo lectura")
+		@Panel("Reservas", TripTicket(data.Trip, false))
+		@Panel("Viajeros", TravelerList(data.Travelers))
+	</div>
+}
+
+templ LoginPage(notice string) {
+	<div class="page-shell narrow">
+		@PageHeading("Oficina central", "Acceso al panel", "Cookie firmada")
+		@Notice(notice)
+		@Panel("Identifíquese", LoginForm())
+	</div>
+}
+
+templ LoginForm() {
+	<form class="vintage-form" hx-post="/auth/login" hx-target="#main-content" hx-swap="innerHTML">
+		@Field("Correo", "email", "dev@trotamundos.app", "", "email", true)
+		@Field("Clave", "password", "", "", "password", true)
+		@SubmitButton("Entrar", "btn-brass")
+	</form>
+	<p class="rail-footnote">Usuario de demostración: dev@trotamundos.app / dev</p>
+}
+
+templ NearbyPage(data NearbyData) {
+	<div class="page-shell narrow">
+		@PageHeading("Geolocalización", "Reservas cercanas", "QA-13 · permiso explícito")
+		@Panel("Coordenadas", NearbyForm(data))
+		<div id="trip-list" class="trip-list" hx-swap-oob="true">
+			if len(data.Trips) == 0 {
+				@EmptyState("No hay reservas dentro del radio indicado.")
+			}
+			for _, t := range data.Trips {
+				@TripTicket(t, true)
+			}
+		</div>
+	</div>
+}
+
+templ NearbyForm(data NearbyData) {
+	<form class="vintage-form" hx-get="/nearby" hx-target="#trip-list" hx-swap="outerHTML">
+		<div class="field-row">
+			@Field("Latitud", "lat", data.Lat, "-34.6037", "text", true)
+			@Field("Longitud", "lon", data.Lon, "-58.3816", "text", true)
+			@Field("Radio km", "radius_km", data.Radius, "50", "number", false)
+		</div>
+		@SubmitButton("Buscar", "btn-brass")
+	</form>
+}
+
+templ ShareLink(result ShareResult) {
+	if result.URL != "" {
+		<p class="notice">Enlace generado: <a href={ result.URL } hx-get={ result.URL } hx-target="#main-content" hx-swap="innerHTML">{ result.URL }</a> (vence { result.ExpiresAt })</p>
+	} else {
+		<p class="notice">No se pudo generar el enlace.</p>
+	}
+}
+
+templ MapPage(points []GeoPoint) {
+	<div class="page-shell narrow">
+		@PageHeading("Cartografía", "Mapa de viajes", fmtInt(len(points)) + " reservas geolocalizadas")
+		@Panel("Plano real · OpenStreetMap, estilo café 1930", MapImage())
+		@Panel("Leyenda", MapLegend())
+	</div>
+}
+
+templ MapImage() {
+	<div class="map-frame">
+		<img class="map-real" src="/map/image" alt="Mapa real de los viajes con marcadores y traza" width="880" height="480" />
+		<p class="map-credit">Mapa y datos © OpenStreetMap contributors · ODbL · teselas en caché</p>
+	</div>
+}
+
+templ MapLegend() {
+	<ul class="map-legend">
+		<li><span class="legend-dot legend-bronze"></span> Reserva geolocalizada (QA-13)</li>
+		<li><span class="legend-line"></span> Traza entre reservas del viaje</li>
+		<li><span class="legend-note">Imagen generada en servidor con go-staticmaps · sin JavaScript</span></li>
+	</ul>
+}

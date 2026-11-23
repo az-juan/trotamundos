@@ -1,0 +1,89 @@
+package views
+
+templ FilterBar(active string) {
+	<div id="filters" class="filters" role="group" aria-label="Filtrar por estado" hx-swap-oob="true">
+		<button class={ FilterClass(active, "") } type="button" hx-get="/trips" hx-target="#trip-list" hx-swap="outerHTML">Todos</button>
+		<button class={ FilterClass(active, "upcoming") } type="button" hx-get="/trips?status=upcoming" hx-target="#trip-list" hx-swap="outerHTML">Próximos</button>
+		<button class={ FilterClass(active, "active") } type="button" hx-get="/trips?status=active" hx-target="#trip-list" hx-swap="outerHTML">En curso</button>
+		<button class={ FilterClass(active, "archived") } type="button" hx-get="/trips?status=archived" hx-target="#trip-list" hx-swap="outerHTML">Archivados</button>
+	</div>
+}
+
+templ DashboardPage(data DashboardData) {
+	<div class="page-shell">
+		<section class="hero">
+			<div class="hero-copy">
+				<span class="eyebrow">Año 1930 · Edición de viajes</span>
+				<h1 class="hero-title">Sus viajes, <em>en un solo lugar</em></h1>
+				<p class="hero-subtitle">Reservas de tren, vapores, hoteles y automóviles, reunidas con elegancia y precisión.</p>
+			</div>
+			<div class="hero-seal" aria-hidden="true">
+				<span class="seal-top">Servicio</span>
+				<span class="seal-main">1930</span>
+				<span class="seal-bottom">Trotamundos</span>
+			</div>
+		</section>
+		<div class="dashboard-grid">
+			<aside class="sidebar">
+				@Panel("Filtrar viajes", FilterBar(data.Active))
+				@Panel("Nuevo viaje", NewTripForm())
+				@Panel("Aviso de la casa", HouseNotice())
+			</aside>
+			<section class="content-column">
+				@PageHeading("Itinerarios", "Sus expedientes de viaje", fmtInt(len(data.Trips)) + " viajes")
+				@TripList(data.Trips, data.Active)
+			</section>
+			<aside class="right-rail">
+				@InsightsPanel(data.Insights)
+				@ActivityFeed(data.Activity)
+			</aside>
+		</div>
+	</div>
+}
+
+templ NewTripForm() {
+	<form class="vintage-form" hx-post="/trips" hx-target="#trip-list" hx-swap="outerHTML">
+		@Field("Denominación", "name", "", "Ej. Buenos Aires → Madrid", "text", true)
+		<div class="field-row">
+			@Field("Inicio", "start_date", "", "", "date", false)
+			@Field("Fin", "end_date", "", "", "date", false)
+		</div>
+		@SubmitButton("Abrir expediente", "btn-brass")
+	</form>
+}
+
+templ HouseNotice() {
+	<p>Pulse <strong>Simular correo</strong> para que Spiritus descubra una reserva y la remita al Núcleo, tal como lo haría un mensaje de confirmación.</p>
+}
+
+templ TripList(trips []TripView, active string) {
+	<div id="trip-list" class="trip-list" hx-swap-oob="true">
+		if len(trips) == 0 {
+			@EmptyState("No hay viajes en esta carpeta. Abra un expediente nuevo o simule un correo.")
+		}
+		for _, trip := range trips {
+			@TripTicket(trip, true)
+		}
+	</div>
+}
+
+templ InsightsPanel(s InsightView) {
+	<section id="insights" class="panel rail-panel" hx-swap-oob="true">
+		<div class="panel-heading-row">
+			<h2 class="panel-title">Boletín de la Mente</h2>
+			<button class="refresh-link" type="button" hx-get="/insights" hx-target="#insights" hx-swap="outerHTML">Actualizar</button>
+		</div>
+		@Stats(s)
+		<p class="rail-footnote">Último registro: { s.LastEventAt }</p>
+	</section>
+}
+
+templ ActivityFeed(items []ActivityView) {
+	<section id="activity" class="panel rail-panel" hx-swap-oob="true">
+		<div class="panel-heading-row">
+			<h2 class="panel-title">Correo recibido</h2>
+			<button class="refresh-link" type="button" hx-post="/demo/ingest" hx-target="#activity" hx-swap="outerHTML">Simular</button>
+		</div>
+		@Timeline(items)
+	</section>
+}

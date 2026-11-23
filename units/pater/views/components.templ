@@ -1,0 +1,212 @@
+package views
+
+// Header y Footer son los ÚNICOS elementos comunes de todas las páginas.
+templ Header(active string, signedIn bool) {
+	<header class="site-header">
+		<div class="header-inner">
+			<div class="brand">
+				<a class="brand-link" href="/" hx-get="/" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true" aria-label="Ir al panel">
+					<span class="brand-mark" aria-hidden="true">✦</span>
+					<span class="brand-type">
+						<span class="brand-name">TROTAMUNDOS</span>
+						<span class="brand-tagline">Oficina central de viajes · Buenos Aires, MCMXXX</span>
+					</span>
+				</a>
+			</div>
+			<nav id="site-nav" class="header-nav" aria-label="Navegación principal">
+				@NavLinks(active, signedIn)
+			</nav>
+		</div>
+		<div class="header-rule" aria-hidden="true"></div>
+	</header>
+}
+
+// NavLinks se reutiliza en el Header y en el swap OOB para mantener el bloque consistente.
+templ NavLinks(active string, signedIn bool) {
+	<a class={ NavClass(active, "panel") } href="/" hx-get="/" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Panel</a>
+	<a class={ NavClass(active, "insights") } href="/insights/view" hx-get="/insights/view" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Boletín</a>
+	<a class={ NavClass(active, "map") } href="/map" hx-get="/map" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Mapa</a>
+	<a class={ NavClass(active, "mailboxes") } href="/mailboxes" hx-get="/mailboxes" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Buzones</a>
+	<a class={ NavClass(active, "whitelists") } href="/whitelists" hx-get="/whitelists" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Remitentes</a>
+	<a class={ NavClass(active, "preferences") } href="/preferences" hx-get="/preferences" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Preferencias</a>
+	if signedIn {
+		<button class="nav-link" type="button" hx-post="/demo/ingest" hx-target="#activity" hx-swap="outerHTML">Simular correo</button>
+		<button class="nav-link" type="button" hx-post="/auth/logout" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Salir</button>
+	} else {
+		<a class="nav-link" href="/login" hx-get="/login" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Acceder</a>
+	}
+}
+
+templ HTMXChrome(title string, active string, signedIn bool) {
+	<title hx-swap-oob="true">{ title }</title>
+	<nav id="site-nav" class="header-nav" aria-label="Navegación principal" hx-swap-oob="true">@NavLinks(active, signedIn)</nav>
+}
+
+templ Footer() {
+	<footer class="site-footer">
+		<div class="footer-inner">
+			<span>Compañía Trotamundos · Sucursal Florida 234</span>
+			<span class="footer-sep">◆</span>
+			<span>Un solo lugar para todos sus arreglos de viaje</span>
+			<span class="footer-sep">◆</span>
+			<span>Trinidad · Fase 0</span>
+		</div>
+	</footer>
+}
+
+templ PageHeading(eyebrow, title, meta string) {
+	<div class="section-heading">
+		<div>
+			<span class="eyebrow">{ eyebrow }</span>
+			<h2 class="section-title">{ title }</h2>
+		</div>
+		if meta != "" {
+			<span class="heading-count">{ meta }</span>
+		}
+	</div>
+}
+
+templ Panel(title string, body templ.Component) {
+	<section class="panel">
+		<h2 class="panel-title">{ title }</h2>
+		@body
+	</section>
+}
+
+templ Notice(text string) {
+	if text != "" {
+		<p class="notice" role="status">{ text }</p>
+	}
+}
+
+templ EmptyState(message string) {
+	<div class="empty-ticket">
+		<span class="empty-mark">✧</span>
+		<p>{ message }</p>
+	</div>
+}
+
+templ Field(label, name, value, placeholder, kind string, required bool) {
+	<label class="field">
+		<span>{ label }</span>
+		if kind == "select" {
+			<select name={ name }>
+				<option value="es" selected?={ value == "es" }>Castellano</option>
+				<option value="en" selected?={ value == "en" }>English</option>
+			</select>
+		} else {
+			<input type={ kind } name={ name } value={ value } placeholder={ placeholder } required?={ required } />
+		}
+	</label>
+}
+
+templ SubmitButton(label, variant string) {
+	<button class={ ButtonClass(variant) } type="submit">{ label }</button>
+}
+
+templ Badge(text string) {
+	<span class="stamp">{ text }</span>
+}
+
+templ BookingRows(bookings []BookingView) {
+	<ul class="booking-list">
+		if len(bookings) == 0 {
+			<li class="booking-empty">Sin reservas registradas todavía.</li>
+		}
+		for _, b := range bookings {
+			<li class="booking-row">
+				<span class="booking-kind">{ TypeLabel(b.Type) }</span>
+				<span class="booking-provider">{ b.Provider }</span>
+				<span class="booking-ref">{ b.ProviderRef }</span>
+				<span class="booking-state">{ StatusLabel(b.Status) }</span>
+			</li>
+		}
+	</ul>
+}
+
+templ BookingForm(tripID string) {
+	<form class="booking-form" hx-post="/bookings" hx-target="#trip-list" hx-swap="outerHTML">
+		<input type="hidden" name="trip_id" value={ tripID } />
+		<select name="type" aria-label="Tipo de reserva">
+			<option value="transport">Transporte</option>
+			<option value="lodging">Alojamiento</option>
+			<option value="car_rental">Automóvil</option>
+		</select>
+		<input type="text" name="provider" placeholder="Proveedor" required />
+		<input type="text" name="provider_ref" placeholder="Referencia" required />
+		<button class="btn btn-small" type="submit">Agregar</button>
+	</form>
+}
+
+templ TripTicket(t TripView, compact bool) {
+	<article class="ticket">
+		<div class="ticket-stub">
+			<span class="stub-label">Exp.</span>
+			<span class="stub-number">{ t.ID }</span>
+			<span class="stub-status">{ StatusLabel(t.Status) }</span>
+		</div>
+		<div class="ticket-main">
+			<header class="ticket-header">
+				<div>
+					<h3 class="ticket-title">
+						if compact {
+							<a href={ "/trips/" + t.ID } hx-get={ "/trips/" + t.ID } hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">{ t.Name }</a>
+						} else {
+							{ t.Name }
+						}
+					</h3>
+					<p class="ticket-dates">
+						if t.StartDate != "" {
+							<span>{ t.StartDate }</span>
+						}
+						if t.EndDate != "" {
+							<span> — { t.EndDate }</span>
+						}
+						if t.StartDate == "" && t.EndDate == "" {
+							<span>Sin fechas definidas</span>
+						}
+					</p>
+				</div>
+				@Badge(StatusLabel(t.Status))
+			</header>
+			@BookingRows(t.Bookings)
+			if compact {
+				@BookingForm(t.ID)
+			}
+		</div>
+	</article>
+}
+
+templ Stats(s InsightView) {
+	<dl class="stat-grid">
+		<div class="stat"><dt>Eventos</dt><dd>{ fmtInt(s.Total) }</dd></div>
+		<div class="stat"><dt>Confirmadas</dt><dd>{ fmtInt(s.Confirmations) }</dd></div>
+		<div class="stat"><dt>Disrupciones</dt><dd>{ fmtInt(s.Disruptions) }</dd></div>
+	</dl>
+}
+
+templ Timeline(items []ActivityView) {
+	<ol class="timeline">
+		if len(items) == 0 {
+			<li class="timeline-empty">Aún no hay movimientos.</li>
+		}
+		for _, a := range items {
+			<li class="timeline-item">
+				<span class="timeline-dot"></span>
+				<div>
+					<strong>{ a.Type }</strong>
+					<p>{ a.Summary }</p>
+					<time>{ a.OccurredAt }</time>
+				</div>
+			</li>
+		}
+	</ol>
+}
+
+templ DataList(rows []KeyValue) {
+	<dl class="data-list">
+		for _, row := range rows {
+			<div><dt>{ row.Key }</dt><dd>{ row.Value }</dd></div>
+		}
+	</dl>
+}

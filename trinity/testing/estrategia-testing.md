@@ -23,16 +23,46 @@
 
 | Unidad | Unitarios | Contrato | Integración |
 |--------|-----------|----------|-------------|
-| Pater | agregación BFF, rate limit, render | OpenAPI (gateway) | REST a Filius (fake) |
+| Pater | render templ/HTMX, sesión cookie, rate limit | `Store` fake con sqlc (ADR-111) | fragmentos HTMX + Hurl E2E |
 | Filius | state machine Booking, use cases | eventos (JSON Schema) | PG (testcontainers), NATS |
 | Spiritus | parseo de correo (regex→template), dedup | eventos (JSON Schema) | IMAP mock, ClickHouse (Fase 1) |
 | Pater · assistant (Fase 1) | `IntentClassifier` (fake), redacción de PII, `AssistanceCase` state machine | OpenAPI `/assistant/*` + Pact Pater→Filius | LLM **fake** (nunca live en CI), Redis efímero |
 
 ## 3. Tests de contrato (SDD)
 
-- **OpenAPI:** `oapi-codegen` genera los handlers; el test verifica que la implementación cumple el spec (round-trip request/response). Herramienta: `schemathesis` o `prism` + `go test`.
+- **OpenAPI:** en Fase 0 es contrato de referencia para el BFF móvil (ADR-111); no genera handlers. Su validación con `schemathesis`/`prism` se reintroduce en Fase 1.
 - **Eventos:** `shared/event` valida los payloads contra `fase_0/docs/events/events.yaml` en boot y en CI (`jsonschema`).
-- **Pact:** Pater (consumer) genera un pact contra Filius (provider). El provider verifica el pact en su pipeline.
+- **Pact:** se reintroduce en Fase 1 cuando vuelva la arista REST Pater↔Filius; en Fase 0 no hay cliente HTTP interno que contratar.
+
+- El mapa se prueba en dos niveles: el handler HTML referencia `/map/image` y verifica que no se añada `<script>`; Hurl comprueba que `/map/image` devuelve `image/png` (ADR-112).
+- Toda respuesta HTMX se valida con swaps OOB de `<title>` y `#site-nav`: el enlace `is-current` y el título deben cambiar con la ruta sin redibujar el documento.
+
+## 3.1. sqlc, HTMX y NATS (ADR-111)
+- No hay tests de API JSON: la capa JSON fue eliminada. Los handlers de Pater se prueban con un `Store` fake y comprueban fragmentos HTMX y la cookie firmada.
+- Las consultas se generan con `sqlc generate` desde `db/queries/*.sql` y `db/schema.sql`; `shared/db` es el código generado (no editar a mano).
+
+
+## 4bis. Pruebas E2E con Hurl (Fase 0)
+
+Con el compose levantado, `./scripts/hurl.sh` ejecuta **38 peticiones** en 7 archivos:
+
+| Archivo | Cobertura |
+|---------|-----------|
+| `smoke.hurl` | `/healthz` de los 3 deployables y 404 de superficies JSON eliminadas (ADR-111) |
+| `pages.hurl` | 9 páginas SSR, CSS madera y `htmx.min.js` servido localmente |
+| `htmx.hurl` | fragmentos `/trips`, `/insights` y `/demo/ingest` con `HX-Request: true` |
+| `auth-preferences.hurl` | cookie firmada HttpOnly, preferencias persistidas con sqlc y logout |
+| `crud.hurl` | alta de viaje/reserva, compartir, ver itinerario y archivar (FR-4/5/6/8) |
+| `mapa.hurl` | página del mapa y PNG real `/map/image` (FR-12, ADR-112) |
+| `integracion.hurl` | webhook sin firma → 401, con HMAC → 202, y salud final (ADR-007) |
+
+```bash
+cd fase_0/deploy && docker compose up -d --build
+cd ../.. && ./scripts/hurl.sh
+```
+
+El script calcula la firma HMAC del payload y usa IDs/tokens leídos de PostgreSQL, por lo que es
+idempotente: el webhook degrada y restaura la reserva `PNR-1930` en la misma corrida.
 
 ## 4. Flaky tests
 
@@ -72,6 +102,6 @@ go tool cover -html=coverage.out
 # Contract tests
 go test ./... -tags=contract -v
 
-# E2E
-cd deploy && docker compose -f docker-compose.e2e.yml up --abort-on-container-exit
+# E2E con Hurl (requiere `docker compose up -d --build`)
+./scripts/hurl.sh
 ```

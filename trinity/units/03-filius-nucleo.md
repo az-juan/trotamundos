@@ -2,7 +2,7 @@
 
 > **Rol**: dominio operacional transaccional (OLTP).
 > **Perfil de carga**: per-request, I/O (SLA ≤ 800 ms, QA-6).
-> **ADR de origen**: 102 (unidad), 103 (aristas REST con Pater y NATS con Spiritus). Complementa: 104 (esquema PG), 014 (JWT RS256 para autenticación).
+> **ADR de origen**: 102 (unidad), 103 (NATS con Spiritus; REST con Pater es referencia Fase 1). Complementa: 104 (esquema PG), 111 (Pater usa sqlc directo).
 > **Colapsa** los deployables de `main`: Itinerary (ADR-001) + Integration (ADR-007), ahora **módulos
 > internos en proceso** dentro de `units/filius`. En **Fase 1** se añade `assistance/` (ADR-110).
 
@@ -12,7 +12,7 @@ Filius es el **Núcleo** transaccional del sistema. Posee la verdad de las reser
 encargado de enriquecerlas con los proveedores externos.
 
 - **itinerary/** — el módulo central (bounded context: Usuario/Preferencias, Viaje, Reserva, Viajero, Ciclo de Vida):
-  - **Usuarios y Preferencias (`filius.users`, ADR-106)**: verificación de credenciales vía `POST /internal/auth/verify` para Pater y gestión de preferencias del viajero (`preferences JSONB`: `locale`, `currency`, `gps_radius_km`, `preferred_agency_id` —agencia elegida para derivaciones, ADR-110— y preferencias de viaje).
+  - **Usuarios y Preferencias (`filius.users`, ADR-106)**: verificación de credenciales (en Fase 0 la realiza Pater con sqlc; el endpoint REST es referencia Fase 1) y gestión de preferencias del viajero (`preferences JSONB`: `locale`, `currency`, `gps_radius_km`, `preferred_agency_id` —agencia elegida para derivaciones, ADR-110— y preferencias de viaje).
   - **Viajes (Trip)**: agrupación de reservas y viajeros (FR-5: agrupar por viaje, auto-archivar al finalizar).
   - **Reservas (Booking)**: hospedaje y transporte, con state machine de ciclo de vida, coordenadas opcionales (`lat`, `lon` para `GET /trips/nearby`, QA-13) y segmentos tipados en `details JSONB`.
   - **Viajeros (Traveler)**; **compartir itinerario** con permisos de visualización (QA-10, FR-8);

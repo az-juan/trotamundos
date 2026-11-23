@@ -5,7 +5,7 @@
         NGINX["Nginx<br/>:80 :443<br/>TLS + Reverse Proxy"]
 
         subgraph "Trinidad — 3 contenedores (triángulo)"
-            PATER["🕊️ pater<br/>Go · Chi + templ+htmx<br/>Gateway · Web BFF · Mobile BFF<br/>:8080"]
+            PATER["🕊️ pater<br/>Go · templ+htmx + sqlc<br/>Web BFF · cookie firmada<br/>:8080"]
             FILIUS["✝️ filius<br/>Go · Hexagonal<br/>Itinerary · Integration<br/>:8081"]
             SPIRITUS["🔥 spiritus<br/>Go · Hexagonal<br/>Email Ingest · Analytics<br/>:8082"]
         end
@@ -39,9 +39,9 @@
     end
 
     %% Triángulo de contenedores: conexiones dos a dos
-    PATER <-->|"REST (arista Pater↔Filius)"| FILIUS
+    PATER <-->|"REST (referencia Fase 1); Fase 0: PG + sqlc"| FILIUS
     FILIUS <-->|"NATS (arista Filius↔Spiritus)"| SPIRITUS
-    SPIRITUS <-->|"read-model / SSE (arista Spiritus→Pater)"| PATER
+    SPIRITUS <-->|"read-model / SSE (referencia Fase 1); Fase 0: PG + sqlc"| PATER
 
     %% Entradas
     BROWSER --> NGINX
@@ -78,6 +78,9 @@
     style CH fill:#1a2a3a,stroke:#2196f3,color:#fff
 ```
 
+> **ADR-111 (prototipo Fase 0):** la arista REST `Pater↔Filius` del triángulo queda como **contrato de referencia**; en la ejecución real los handlers de Pater consultan PostgreSQL con **sqlc** directamente. NATS sigue solo en `Filius↔Spiritus`.
+
+
 ## Propósito de esta vista (allocation / deployment structure, Bass ch.1/22)
 
 Vista de **asignación** (estructura de despliegue): cómo se mapea el código a la infraestructura. La
@@ -104,9 +107,9 @@ services:
     volumes: ["./nginx/conf.d:/etc/nginx/conf.d:ro"]
     depends_on: [pater]
 
-  pater:        # 🕊️ Gateway + Web BFF + Mobile BFF (un binario Go)
+  pater:        # 🕊️ Web BFF SSR + sqlc + HTMX (un binario Go)
     build: { context: ., target: pater }
-    environment: [PATER_PG_DSN, PATER_REDIS_URL, JWT_PRIVATE_KEY_FILE]
+    environment: [PATER_PG_DSN, SESSION_SECRET]
     depends_on: [filius]            # llama a Filius por REST en la red interna
     restart: unless-stopped
 

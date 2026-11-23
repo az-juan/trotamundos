@@ -111,6 +111,7 @@ reutilizan casi intactas:
 | ADR-108 Aislamiento RBAC en PG, resiliencia de publicación a NATS y SLA Fase 0 | [adrs/adr-108-aislamiento-rbac-y-resiliencia-eventos.md](./adrs/adr-108-aislamiento-rbac-y-resiliencia-eventos.md) | (mitiga DT-01, DT-03, DT-05) |
 | **ADR-109 Asistente Virtual en Pater (Fase 1)** | [adrs/adr-109-asistente-virtual.md](./adrs/adr-109-asistente-virtual.md) | (nueva capacidad, FR-10/QA-16) |
 | **ADR-110 Derivación a agencia, caso y eventos `assistance.*` (Fase 1)** | [adrs/adr-110-derivacion-y-estado-asistente.md](./adrs/adr-110-derivacion-y-estado-asistente.md) | (refina ADR-106/FR-6, FR-11/QA-17) |
+| **ADR-111 Sin API JSON: HTMX + sqlc + cookie (Fase 0)** | [adrs/adr-111-sin-json-sqlc-htmx.md](./adrs/adr-111-sin-json-sqlc-htmx.md) | (revisa ADR-006/013/014/103 para el prototipo) |
 
 ## 6. Diagrama de contexto (C4 nivel 1, CON-2)
 
