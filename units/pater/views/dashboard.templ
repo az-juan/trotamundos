@@ -59,7 +59,7 @@ templ NewTripForm() {
 }
 
 templ HouseNotice() {
-	<p>Pulse <strong>Simular correo</strong> para que Spiritus descubra una reserva y la remita al Núcleo, tal como lo haría un mensaje de confirmación.</p>
+	<p>Pulse <strong>Simular correo</strong> para comprobar cómo incorporamos automáticamente a su itinerario las confirmaciones que llegan a su casilla.</p>
 }
 
 templ TripList(trips []TripView, active string, oob bool) {
@@ -81,7 +81,7 @@ templ TripList(trips []TripView, active string, oob bool) {
 // inicial y en el refresh para que el título y la nota no desaparezcan.
 templ InsightsBody(s InsightView) {
 	<div class="panel-heading-row">
-		<h2 class="panel-title">Boletín de la Mente</h2>
+		<h2 class="panel-title">Resumen de actividad</h2>
 		<button class="refresh-link" type="button" hx-get="/insights" hx-target="#insights" hx-swap="innerHTML">Actualizar</button>
 	</div>
 	@Stats(s)

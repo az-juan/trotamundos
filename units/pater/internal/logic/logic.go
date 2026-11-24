@@ -347,3 +347,91 @@ func (s *SQLStore) GeoPoints(ctx context.Context) ([]views.GeoPoint, error) {
 	}
 	return out, nil
 }
+
+func toCaseView(r db.AssistanceCaseRow) views.AssistanceCaseView {
+	return views.AssistanceCaseView{
+		ID: r.ID, UserID: r.UserID, TripID: r.TripID, BookingID: r.BookingID,
+		Status: r.Status, Reason: r.Reason, Severity: r.Severity,
+		AgencyID: r.AgencyID, CreatedAt: r.CreatedAt, ResolvedAt: r.ResolvedAt,
+	}
+}
+
+func (s *SQLStore) AssistanceCases(ctx context.Context) ([]views.AssistanceCaseView, error) {
+	rows, err := s.q.ListAssistanceCases(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]views.AssistanceCaseView, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, toCaseView(r))
+	}
+	return out, nil
+}
+
+func (s *SQLStore) GetAssistanceCase(ctx context.Context, id string) (views.AssistanceCaseView, error) {
+	r, err := s.q.GetAssistanceCase(ctx, uuid(id))
+	if err != nil {
+		return views.AssistanceCaseView{}, err
+	}
+	return toCaseView(r), nil
+}
+
+func (s *SQLStore) CreateAssistanceCase(ctx context.Context, tripID, bookingID, reason, severity, agencyID string) (views.AssistanceCaseView, error) {
+	if agencyID == "" {
+		if prefs, err := s.Preferences(ctx, s.userID); err == nil && prefs.PreferredAgency != "" {
+			agencyID = prefs.PreferredAgency
+		}
+		if agencyID == "" {
+			agencyID = "agencia-austral"
+		}
+	}
+	r, err := s.q.CreateAssistanceCase(ctx, db.CreateAssistanceCaseParams{
+		UserID: uuid(s.userID), TripID: tripID, BookingID: bookingID,
+		Reason: reason, Severity: severity, AgencyID: agencyID,
+	})
+	if err != nil {
+		return views.AssistanceCaseView{}, err
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"case_id": r.ID, "agency_id": r.AgencyID, "reason": r.Reason,
+		"severity": r.Severity, "tier1_resolved": false,
+	})
+	_ = s.q.InsertAnalyticsEvent(ctx, db.InsertAnalyticsEventParams{
+		EventID: "handoff-" + r.ID, EventType: "assistance.handoff_requested",
+		UserID: s.userID, TripID: tripID, BookingID: bookingID, Payload: payload,
+	})
+	return toCaseView(r), nil
+}
+
+func (s *SQLStore) UpdateAssistanceCaseStatus(ctx context.Context, id, status string) (views.AssistanceCaseView, error) {
+	r, err := s.q.UpdateAssistanceCaseStatus(ctx, db.UpdateAssistanceCaseStatusParams{
+		ID: uuid(id), Status: status,
+	})
+	if err != nil {
+		return views.AssistanceCaseView{}, err
+	}
+	if status == "resolved" {
+		payload, _ := json.Marshal(map[string]any{
+			"case_id": r.ID, "agency_id": r.AgencyID,
+			"outcome": "resolved_by_agency", "tier1_resolved": false,
+		})
+		_ = s.q.InsertAnalyticsEvent(ctx, db.InsertAnalyticsEventParams{
+			EventID: "resolved-" + r.ID, EventType: "assistance.resolved",
+			UserID: s.userID, TripID: r.TripID, BookingID: r.BookingID, Payload: payload,
+		})
+	}
+	return toCaseView(r), nil
+}
+
+func (s *SQLStore) RecordTier1Resolution(ctx context.Context, intent string) error {
+	b := make([]byte, 6)
+	_, _ = rand.Read(b)
+	evID := "tier1-" + hex.EncodeToString(b)
+	payload, _ := json.Marshal(map[string]any{
+		"intent": intent, "outcome": "resolved_by_assistant", "tier1_resolved": true,
+	})
+	return s.q.InsertAnalyticsEvent(ctx, db.InsertAnalyticsEventParams{
+		EventID: evID, EventType: "assistance.resolved",
+		UserID: s.userID, Payload: payload,
+	})
+}

@@ -169,10 +169,7 @@ flowchart LR
 
 ## 4. Fases siguientes (sin cambiar el estilo)
 
-- **Fase 1**: segundo Droplet para ClickHouse + Metabase (Spiritus lo posee); Redis managed; NATS a 3
-  nodos si el volumen lo exige; **activación del Asistente Virtual** por feature flag en `pater`
-  (variables `ASSISTANT_LLM_BASE_URL`, `ASSISTANT_LLM_API_KEY_FILE` y `ASSISTANT_ENABLED`), con
-  fallback determinista si el proveedor no responde (ADR-109).
+- **Fase 1 (En curso — Inicio parcial con Asistente Virtual, ADR-113)**: activado el MVP determinista del **Asistente Virtual** (`/assistant` en `pater`, `/internal/assistance/*` en `filius` y suscripción `assistance.>` en `spiritus`, usando el Redis y NATS del Droplet 1 sin costo adicional). El segundo Droplet para ClickHouse + Metabase y la expansión de NATS a 3 nodos permanecen pendientes de sus disparadores de volumen.
 - **Fase 2**: K3s + Terraform + ArgoCD. La Trinidad migra **3 despliegues**, no 7. Identity se extrae
   como servicio (deja de emitir JWT el Gateway de Pater; ADR-014).
 

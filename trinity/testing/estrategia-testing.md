@@ -42,19 +42,20 @@
 - Las consultas se generan con `sqlc generate` desde `db/queries/*.sql` y `db/schema.sql`; `shared/db` es el código generado (no editar a mano).
 
 
-## 4bis. Pruebas E2E con Hurl (Fase 0)
+## 4bis. Pruebas E2E con Hurl (Fase 0 + Inicio Parcial Fase 1)
 
-Con el compose levantado, `./scripts/hurl.sh` ejecuta **38 peticiones** en 7 archivos:
+Con el compose levantado, `./scripts/hurl.sh` ejecuta **8 archivos** E2E (`fase_0/tests/hurl/*.hurl` y `fase_1/tests/hurl/*.hurl`):
 
 | Archivo | Cobertura |
 |---------|-----------|
-| `smoke.hurl` | `/healthz` de los 3 deployables y 404 de superficies JSON eliminadas (ADR-111) |
-| `pages.hurl` | 9 páginas SSR, CSS madera y `htmx.min.js` servido localmente |
+| `smoke.hurl` | `/healthz` de los 3 deployables, 404 de superficies JSON eliminadas (ADR-111) y 200 de `/assistant` (ADR-113) |
+| `pages.hurl` | Páginas SSR, CSS madera y `htmx.min.js` servido localmente |
 | `htmx.hurl` | fragmentos `/trips`, `/insights` y `/demo/ingest` con `HX-Request: true` |
 | `auth-preferences.hurl` | cookie firmada HttpOnly, preferencias persistidas con sqlc y logout |
 | `crud.hurl` | alta de viaje/reserva, compartir, ver itinerario y archivar (FR-4/5/6/8) |
 | `mapa.hurl` | página del mapa y PNG real `/map/image` (FR-12, ADR-112) |
 | `integracion.hurl` | webhook sin firma → 401, con HMAC → 202, y salud final (ADR-007) |
+| `fase_1/tests/hurl/assistant.hurl` | consulta Nivel 1, reprogramación guiada (FR-6) y derivación a agencia preferida (FR-11, ADR-109/110/113) |
 
 ```bash
 cd fase_0/deploy && docker compose up -d --build

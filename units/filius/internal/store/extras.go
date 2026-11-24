@@ -192,3 +192,82 @@ func distance(lat1, lon1, lat2, lon2 float64) float64 {
 	a := math.Sin(dLat/2)*math.Sin(dLat/2) + math.Cos(lat1*rad)*math.Cos(lat2*rad)*math.Sin(dLon/2)*math.Sin(dLon/2)
 	return 2 * r * math.Asin(math.Sqrt(a))
 }
+
+// AssistanceCase es el agregado de soporte derivado a agencia (Fase 1, ADR-110).
+type AssistanceCase struct {
+	ID         string `json:"id"`
+	UserID     string `json:"user_id"`
+	TripID     string `json:"trip_id,omitempty"`
+	BookingID  string `json:"booking_id,omitempty"`
+	Status     string `json:"status"`
+	Reason     string `json:"reason"`
+	Severity   string `json:"severity"`
+	AgencyID   string `json:"agency_id,omitempty"`
+	CreatedAt  string `json:"created_at"`
+	ResolvedAt string `json:"resolved_at,omitempty"`
+}
+
+func (s *Memory) OpenCase(userID, tripID, bookingID, reason, severity, agencyID string) AssistanceCase {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if agencyID == "" {
+		if u, ok := s.users[userID]; ok {
+			if pref, _ := u.Preferences["preferred_agency_id"].(string); pref != "" {
+				agencyID = pref
+			}
+		}
+		if agencyID == "" {
+			agencyID = "agencia-austral"
+		}
+	}
+	c := AssistanceCase{
+		ID:        token(8),
+		UserID:    userID,
+		TripID:    tripID,
+		BookingID: bookingID,
+		Status:    "open",
+		Reason:    reason,
+		Severity:  severity,
+		AgencyID:  agencyID,
+		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+	}
+	s.cases[c.ID] = &c
+	s.caseOrder = append(s.caseOrder, c.ID)
+	return c
+}
+
+func (s *Memory) GetCase(id string) (AssistanceCase, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	c, ok := s.cases[id]
+	if !ok {
+		return AssistanceCase{}, false
+	}
+	return *c, true
+}
+
+func (s *Memory) ListCases() []AssistanceCase {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]AssistanceCase, 0, len(s.caseOrder))
+	for i := len(s.caseOrder) - 1; i >= 0; i-- {
+		if c, ok := s.cases[s.caseOrder[i]]; ok {
+			out = append(out, *c)
+		}
+	}
+	return out
+}
+
+func (s *Memory) UpdateCaseStatus(id, status string) (AssistanceCase, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	c, ok := s.cases[id]
+	if !ok {
+		return AssistanceCase{}, false
+	}
+	c.Status = status
+	if status == "resolved" || status == "closed" {
+		c.ResolvedAt = time.Now().UTC().Format(time.RFC3339)
+	}
+	return *c, true
+}

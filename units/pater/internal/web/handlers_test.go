@@ -19,6 +19,8 @@ type fakeStore struct {
 	prefs    views.PreferencesData
 	senders  []views.SenderView
 	ingested int
+	cases    []views.AssistanceCaseView
+	tier1    int
 }
 
 func (f *fakeStore) Trips(context.Context, string) ([]views.TripView, error) { return f.trips, nil }
@@ -88,6 +90,41 @@ func (f *fakeStore) AddSender(_ context.Context, sender string) error {
 	return nil
 }
 func (f *fakeStore) RemoveSender(context.Context, string) error { return nil }
+func (f *fakeStore) AssistanceCases(context.Context) ([]views.AssistanceCaseView, error) {
+	return f.cases, nil
+}
+func (f *fakeStore) GetAssistanceCase(_ context.Context, id string) (views.AssistanceCaseView, error) {
+	for _, c := range f.cases {
+		if c.ID == id {
+			return c, nil
+		}
+	}
+	return views.AssistanceCaseView{}, errors.New("no encontrado")
+}
+func (f *fakeStore) CreateAssistanceCase(_ context.Context, tripID, bookingID, reason, severity, agencyID string) (views.AssistanceCaseView, error) {
+	if agencyID == "" {
+		agencyID = "agencia-austral"
+	}
+	c := views.AssistanceCaseView{
+		ID: "case-1930", UserID: "user-1", TripID: tripID, BookingID: bookingID,
+		Status: "open", Reason: reason, Severity: severity, AgencyID: agencyID,
+	}
+	f.cases = append(f.cases, c)
+	return c, nil
+}
+func (f *fakeStore) UpdateAssistanceCaseStatus(_ context.Context, id, status string) (views.AssistanceCaseView, error) {
+	for i := range f.cases {
+		if f.cases[i].ID == id {
+			f.cases[i].Status = status
+			return f.cases[i], nil
+		}
+	}
+	return views.AssistanceCaseView{}, errors.New("no encontrado")
+}
+func (f *fakeStore) RecordTier1Resolution(context.Context, string) error {
+	f.tier1++
+	return nil
+}
 
 func newHandlers() (*Handlers, *fakeStore) {
 	f := &fakeStore{
@@ -223,7 +260,7 @@ func TestMapaRealSinJS(t *testing.T) {
 	h.MapRenderer = r
 	w := serve(h, http.MethodGet, "/map", "", nil)
 	body := w.Body.String()
-	for _, needle := range []string{`<img class="map-real"`, "/map/image", "OpenStreetMap", "go-staticmaps"} {
+	for _, needle := range []string{`<img class="map-real"`, "/map/image", "OpenStreetMap"} {
 		if !strings.Contains(body, needle) {
 			t.Errorf("falta %q en la página del mapa", needle)
 		}
@@ -370,5 +407,39 @@ func TestCalendarioMensual(t *testing.T) {
 	}
 	if n := strings.Count(body, `class="agenda-weekday"`); n != 7 {
 		t.Errorf("esperaba 7 días de la semana, hay %d", n)
+	}
+}
+
+func TestAsistenteVirtualDeterministaYDerivacion(t *testing.T) {
+	h, f := newHandlers()
+	w := serve(h, http.MethodGet, "/assistant", "", nil)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "Mostrador de Asistencia") {
+		t.Fatalf("GET /assistant falló: %d", w.Code)
+	}
+
+	// 1. Consulta de estado (resuelta en Nivel 1)
+	w = serve(h, http.MethodPost, "/assistant/messages", url.Values{
+		"message": {"¿En qué estado está mi reserva PNR-1930?"},
+	}.Encode(), nil)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "PNR-1930") || f.tier1 == 0 {
+		t.Errorf("consulta de estado Nivel 1 falló: %d", w.Code)
+	}
+
+	// 2. Caso complejo derivado a agencia preferida (FR-11, ADR-110/113)
+	w = serve(h, http.MethodPost, "/assistant/messages", url.Values{
+		"message": {"Solicito reembolso complejo con mi agencia preferida"},
+	}.Encode(), nil)
+	if w.Code != http.StatusOK || len(f.cases) != 1 || !strings.Contains(w.Body.String(), "case-1930") {
+		t.Errorf("derivación a agencia falló: cases=%d", len(f.cases))
+	}
+
+	// 3. Confirmar handoff y resolver caso
+	w = serve(h, http.MethodPost, "/assistant/cases/case-1930/handoff", "", nil)
+	if w.Code != http.StatusOK || f.cases[0].Status != "handed_off" {
+		t.Errorf("handoff de caso falló: %+v", f.cases[0])
+	}
+	w = serve(h, http.MethodPost, "/assistant/cases/case-1930/resolve", "", nil)
+	if w.Code != http.StatusOK || f.cases[0].Status != "resolved" {
+		t.Errorf("resolución de caso falló: %+v", f.cases[0])
 	}
 }

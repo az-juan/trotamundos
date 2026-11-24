@@ -22,9 +22,10 @@ Toda la documentación de la arquitectura vive en [`trinity/`](./trinity/):
 | **Vistas arquitectónicas** | [`trinity/architecture/`](./trinity/architecture/) | Módulos (código) · Componentes y conectores (runtime) · Despliegue |
 | **Detalle por unidad** | [`trinity/units/`](./trinity/units/) | Pater · Filius · Spiritus + catálogo de eventos |
 | **Contratos y datos** | [`trinity/README.md`](./trinity/README.md) | OpenAPI 3.1 · eventos JSON Schema · modelo de datos · dev · testing · ops |
-| **Decisiones (ADR)** | [`trinity/adrs/`](./trinity/adrs/) | ADR-101..110 (Trinidad, Hardening Fase 0 y Asistente Virtual Fase 1) + ADR-001..014 (heredados/adaptados) |
+| **Decisiones (ADR)** | [`trinity/adrs/`](./trinity/adrs/) | ADR-101..113 (Trinidad, Hardening Fase 0 y Asistente Virtual en inicio parcial de Fase 1) + ADR-001..014 (heredados/adaptados) |
 | **Drivers** | [`trinity/drivers/`](./trinity/drivers/) | Requerimientos, atributos de calidad, constraints, concerns |
 | **Registro de evolución** | [`trinity/registers/`](./trinity/registers/) | Changelog, deuda arquitectónica, criterios de transición |
+| **Inicio parcial Fase 1** | [`fase_1/README.md`](./fase_1/README.md) | MVP determinista del Asistente Virtual (FR-10/FR-11, QA-16/QA-17) y pruebas E2E de Fase 1 |
 | **Especificación rectora** | [`skills/SPEC_ARCHITECTURE.md`](./skills/SPEC_ARCHITECTURE.md) | Marco ADD 3.0 + SDD |
 
 ## Por qué Trinidad
@@ -34,9 +35,9 @@ con **solo 3 deployables** en vez de 7: sin service mesh, sin Kubernetes en Fase
 Docker Compose. Se respeta la sobriedad operativa exigida por las restricciones del proyecto (equipo
 pequeño, poco tiempo, presupuesto limitado) y se preserva la vía de extracción de módulo a servicio.
 
-## Capacidad Fase 1: Asistente Virtual
+## Inicio Parcial de Fase 1: Asistente Virtual (MVP Determinista)
 
-El **Asistente Virtual** ([ADR-109](./trinity/adrs/adr-109-asistente-virtual.md), [ADR-110](./trinity/adrs/adr-110-derivacion-y-estado-asistente.md)) es soporte de primer nivel para reprogramaciones guiadas, consultas de estado e incidencias menores; los casos complejos se derivan a la **agencia preferida** del usuario. Es un módulo de **Pater** (`assistant/`) con un agregado en **Filius** (`assistance/`): **no añade deployables ni aristas**, y su activación está prevista para **Fase 1** (Fase 0 se mantiene sin chat, según `trinity/drivers/design-purpose.md`).
+El **Asistente Virtual** ([ADR-109](./trinity/adrs/adr-109-asistente-virtual.md), [ADR-110](./trinity/adrs/adr-110-derivacion-y-estado-asistente.md), [ADR-113](./trinity/adrs/adr-113-inicio-parcial-fase1-asistente-determinista.md)) inaugura de forma parcial e incremental la **Fase 1** (activado por el Disparador 5 de `trinity/registers/transiciones.md`, sin adelantar ClickHouse ni el Mobile BFF). Ofrece soporte de primer nivel en `/assistant` para consultas de estado, reprogramaciones guiadas (`FR-6`) e incidencias menores usando el clasificador determinista `RuleBasedClassifier` detrás del puerto `IntentClassifier` (con redacción de PII y sesión efímera en Redis), y deriva los casos complejos a la **agencia preferida** del usuario mediante `POST /internal/assistance/cases` en **Filius** (`filius.assistance_cases` + `context_token` de un solo uso en Redis + eventos `assistance.>` en NATS hacia **Spiritus**). Ver detalle en [`fase_1/README.md`](./fase_1/README.md).
 
 ## Prototipo ejecutable Fase 0 (CON-4)
 
@@ -107,7 +108,7 @@ requiere Go ≥ 1.25 (dentro de la restricción documentada «Go 1.23+»).
 ### Páginas y componentes
 
 - **Páginas** (`units/pater/views/`): Panel, Viajes, Detalle de viaje, Boletín, Buzones, Remitentes,
-  Preferencias, Itinerario compartido, Acceso, Cercanías (GPS), Mapa real y Calendario mensual.
+  Asistente Virtual (`/assistant`, Fase 1 parcial), Preferencias, Itinerario compartido, Acceso, Cercanías (GPS), Mapa real y Calendario mensual.
 - **Componentes reutilizables** (`views/components.templ`): `Header`, `Footer`, `Panel`, `PageHeading`,
   `Field`, `SubmitButton`, `Badge`, `EmptyState`, `BookingRows`, `BookingForm`, `TripTicket`, `Stats`,
   `Timeline` y `DataList`. Las páginas los componen; no repiten encabezados, tablas ni formularios.

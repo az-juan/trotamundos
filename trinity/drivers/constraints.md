@@ -44,12 +44,12 @@
 - Migración NATS → Kafka (solo si se cumple 2-de-3, ADR-103).
 - Extracción de Notification como servicio (Fase 1, como módulo de Spiritus).
 - API JSON, BFF móvil, JWT/JWKS y clientes HTTP internos en el prototipo Fase 0: los handlers usan sqlc directo, HTMX y cookie firmada (ADR-111).
-- Proveedor de LLM o plataforma de chatbot gestionada en Fase 0: el Asistente Virtual se habilita en **Fase 1** detrás del puerto `IntentClassifier`, con fallback determinista y coste monitorizado (ADR-109).
+- Proveedor de LLM o plataforma de chatbot gestionada en Fase 0: el Asistente Virtual se habilita al **iniciar la Fase 1 parcial** operando inicialmente con el adaptador determinista `RuleBasedClassifier` detrás del puerto `IntentClassifier` (coste $0, cero PII externa, ADR-109/113).
 
 ## 7. Disparadores para revisar estas restricciones
 
 - Equipo crece a > 8 devs → revisar K8s (ADR-105).
 - Una unidad exige escalado independiente → regla 2-de-3 (ADR-102).
 - Volumen de eventos > 100K msg/s o replay > 3 meses → migrar NATS→Kafka (ADR-103).
-- Presupuesto permite segundo Droplet → Fase 1 (ClickHouse + Metabase).
-- Validar QA-16/QA-17 con datos reales → activar Asistente Virtual en Fase 1 (ADR-109/110).
+- Presupuesto permite segundo Droplet → Fase 1 analítica (ClickHouse + Metabase).
+- **(Activado — Inicio parcial Fase 1):** Solicitud del canal de soporte conversacional (`FR-10`/`FR-11`) → activado el MVP determinista del Asistente Virtual en `/assistant` (ADR-109/110/113).

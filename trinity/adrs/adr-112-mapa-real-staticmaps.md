@@ -5,59 +5,73 @@
 * **Decidido por:** Equipo de arquitectura
 * **Iteración ADD:** IV (extensión del prototipo, CON-4)
 
-## Contexto y planteamiento del problema
+## Contexto y Planteamiento del Problema
 
-El usuario pidió visualizar los viajes en un mapa **real** con estética de cafetería porteña de 1930,
-sin introducir JavaScript propio ni una API de mapas de pago (ADR-111, CON-3, CON-4).
-`filius.bookings.details` ya guarda `lat`/`lon` (QA-13) y `ListGeoPoints` los expone vía sqlc.
+Se requiere permitir al viajero visualizar sus viajes y reservas geolocalizadas en un **mapa real** con
+estética de cafetería porteña de 1930, sin introducir JavaScript de mapas en el cliente ni contratar
+una API de cartografía de pago (ADR-111, CON-3, CON-4). La tabla `filius.bookings.details` ya almacena
+`lat` y `lon` (QA-13) y la consulta `ListGeoPoints` los expone mediante `sqlc`.
 
-| ID | Restricción | Implicación |
-|----|-------------|-------------|
-| C1 | ADR-111: sin JS propio | Descarta Leaflet/Mapbox GL |
-| C2 | Presupuesto ~$80/mes sin plataformas gestionadas | Sin API key ni proveedor de mapas de pago |
-| C3 | QA-6/QA-7: primera respuesta útil | La imagen se genera en servidor y se cachea |
-| C4 | Paleta 1930 + tonos madera | El tinte se aplica con CSS (`sepia` + marco `wood`), no con tiles modificados |
+**Auditoría de consistencia previa (SPEC-001, Regla 2 — Paso 0):**
 
-## Drivers de decisión
+| ID | Restricción / Decisión vigente | Implicación |
+|----|-------------------------------|-------------|
+| C1 | ADR-111: sin JavaScript propio en el cliente | Descarta librerías cliente como Leaflet o Mapbox GL JS |
+| C2 | `constraints.md`: presupuesto ~$80/mes, sin plataformas SaaS de pago | Descarta proveedores que exijan API key comercial |
+| C3 | QA-6 / QA-7: primera respuesta rápida (≤ 800 ms) | La imagen cartográfica debe generarse en servidor y cachearse en memoria/disco |
+| C4 | Estética Buenos Aires 1930 + tonos madera | El tinte sepia y el marco de madera se aplican por CSS sobre el PNG servido |
 
-* **FR-12** — visualización cartográfica de reservas geolocalizadas.
-* **QA-13** — usar coordenadas existentes, sin GPS automático en web.
-* **QA-9** — las coordenadas viajan al navegador como imagen, no como telemetría a un SDK third-party.
+## Drivers de Decisión
 
-## Opciones consideradas y evaluación
+* **FR-12** — visualización cartográfica de reservas geolocalizadas y rutas entre destinos.
+* **QA-13** — uso de coordenadas de reservas existentes sin requerir rastreo GPS continuo en navegador.
+* **QA-9** — privacidad: las coordenadas se procesan en el servidor y viajan al navegador como imagen PNG, sin cargar SDKs de terceros en el cliente.
+* **Regla 3 de la SPEC** — sobriedad operativa y presupuesto acotado.
 
-| Opción | Promueve | Inhibe | Resultado |
-|--------|----------|--------|-----------|
-| 1. Leaflet + OSM en cliente | interactividad, zoom | JavaScript, CDN, contradice C1 | Descartada |
-| 2. Teselas OSM como `<img>` + CSS | sin JS | dependencia de red por imagen, sin trazas | Descartada |
-| 3. SVG dibujado a mano en templ | cero dependencias, estilo controlado | **no es un mapa real**: no calles ni barrios | Intentada y sustituida |
-| 4. `go-staticmaps` + teselas OSM, PNG en servidor (elegida) | mapa real, sin JS, sin API key, trazas y marcadores | dependencia de red al renderizar, política de uso de OSM | **Aceptada** |
+## Opciones Consideradas (Mínimo 3 Alternativas Razonables)
 
-La opción 4 satisface los ASR críticos (C1–C4). `NewTileProviderOpenStreetMaps()` no requiere clave;
-`carto` fue probado y devuelve marcas de agua «API KEY REQUIRED», por lo que se descarta.
+* **Opción 1:** *Leaflet / Mapbox GL JS en el navegador* consumiendo teselas desde el cliente.
+* **Opción 2:** *Mosaico de teselas OpenStreetMap como etiquetas `<img>` estáticas + CSS* sin librería de renderizado en servidor.
+* **Opción 3:** *Mapa vectorial SVG dibujado a mano en plantillas `templ`* sin cartografía real.
+* **Opción 4:** *Renderizado en servidor con `go-staticmaps` + teselas OpenStreetMap cacheadas (`image/png`)* **(propuesta)**.
 
-## Decisión
+## Evaluación Comparativa de Alternativas
 
-Pater genera el PNG con `internal/maps.Renderer` usando `github.com/flopp/go-staticmaps` y
-`github.com/golang/geo/s2`:
+### Opción 1: Leaflet / Mapbox GL JS en el navegador
+* **Ventajas:** zoom y paneo interactivos en cliente; ecosistema conocido.
+* **Desventajas:** requiere JavaScript adicional en el navegador y expone la IP del viajero a CDNs externos en cada carga.
+* **Impacto en Restricciones:** **contradice** ADR-111 (C1, cero JS propio) y debilita QA-9. Descartada.
 
-* marcadores burdeos por reserva (`Provider · ProviderRef`),
-* traza dorada entre reservas del mismo conjunto,
-* ajuste de límites/zoom cuando hay varias coordenadas,
-* caché de teselas en `os.TempDir()/trotamundos-tiles` y caché de imagen en memoria (TTL 15 min),
-* User-Agent identificable, en cumplimiento de la política de uso de teselas OSM.
+### Opción 2: Mosaico de teselas OpenStreetMap como `<img>` estáticas + CSS
+* **Ventajas:** no requiere JavaScript en el navegador.
+* **Desventajas:** no permite trazar polilíneas geodésicas entre reservas de un mismo viaje ni ajustar dinámicamente el bounding-box y nivel de zoom según la dispersión de puntos.
+* **Impacto en Restricciones:** insuficiente para satisfacer `FR-12` (rutas y marcadores por estado). Descartada.
 
-El navegador recibe `/map/image` (`Content-Type: image/png`) dentro de un marco madera con filtro CSS
-`sepia(.32) saturate(.86) contrast(1.06)` y atribución visible a OpenStreetMap contributors (ODbL).
+### Opción 3: Mapa vectorial SVG dibujado a mano en `templ`
+* **Ventajas:** cero dependencias externas y control estético total.
+* **Desventajas:** no representa un mapa real (carece de calles, barrios, costas y escala geográfica mundial cuando se cargan destinos fuera de Buenos Aires).
+* **Impacto en Restricciones:** compatible con presupuesto, pero funcionalmente insuficiente para `FR-12`. Sustituida por la Opción 4.
+
+### Opción 4: Renderizado en servidor con `go-staticmaps` + teselas OSM cacheadas — propuesta
+* **Ventajas:** genera un mapa cartográfico real en formato PNG (`880×480`) en el servidor con marcadores coloreados por estado (`upcoming`, `active`, `archived`) y trazas entre reservas del mismo viaje; requiere cero JavaScript en cliente y cero API keys comerciales; cachea teselas en disco (`os.TempDir()/trotamundos-tiles`) e imágenes compuestas en memoria (TTL 15 min).
+* **Desventajas:** el primer render de una región nueva requiere acceso HTTP saliente desde el servidor hacia el servidor de teselas de OpenStreetMap.
+* **Impacto en Restricciones:** **óptimo** — cumple C1–C4, `FR-12`, `QA-9` y `QA-13`.
+
+## Decisión Adoptada y Justificación
+
+Se elige la **Opción 4** porque es la única alternativa que ofrece cartografía real con rutas y marcadores
+por estado respetando simultáneamente la prohibición de JavaScript propio de [ADR-111](./adr-111-sin-json-sqlc-htmx.md)
+y el presupuesto de ~$80/mes sin API keys comerciales.
+
+Pater implementa `internal/maps.Renderer` con `github.com/flopp/go-staticmaps` y `github.com/golang/geo/s2`:
+* Marcadores diferenciados por estado del viaje (`Próximos` en bronce, `En curso` en pizarra, `Archivados` en burdeos).
+* Traza dorada conectando las reservas geolocalizadas de cada viaje.
+* Cálculo automático de centro y zoom a partir de las coordenadas filtradas.
+* Caché de teselas en disco y caché del PNG resultante en memoria por 15 minutos, con `User-Agent` identificable conforme a la política de OpenStreetMap.
+* El endpoint `/map/image?status=…` sirve `Content-Type: image/png` y la vista `/map` permite filtrar por estado mediante chips HTMX.
 
 ## Consecuencias
 
-* **Positivas:** mapa real sin JS ni coste; consistencia con ADR-111; estética 1930 conservada; QA-13 verificable.
-* **Negativas:** el primer render necesita red hacia el servidor de teselas; si falla, el handler responde 502
-  y la página mantiene el marco con el texto alternativo. OSM exige caché y User-Agent respetuosos.
-* **Deuda:** no hay reintento ni proveedor alternativo; se registrará si el volumen de render crece.
-
-## Verificación
-
-Prueba de handler sin JS adicional; contenedor con 7 servicios *healthy*; `/map/image` devuelve PNG real
-con calles y barrios de Buenos Aires; coordenadas de reservas sobre la imagen; captura revisada visualmente.
+* **Impacto Positivo:** mapa real en servidor sin JS ni costos de licenciamiento; coherencia total con ADR-111 y la estética Buenos Aires 1930; privacidad del cliente preservada (`QA-9`).
+* **Trade-offs y Riesgos Aceptados:** dependencia de red en servidor durante el primer render de teselas no cacheadas (si el proveedor de teselas no responde, el handler devuelve `502` sin tumbar la página `/map`).
+* **Deuda Arquitectónica / Acciones Futuras:** si el tráfico de renderizado cartográfico crece en Fase 2, evaluar un servidor de teselas propio o caché persistente en volumen Docker.

@@ -29,5 +29,6 @@ HTTP 404
 GET {{host}}/auth/refresh
 HTTP 404
 
-GET {{host}}/assistant/messages
-HTTP 404
+# Inicio parcial Fase 1: el Asistente Virtual está activo en /assistant (ADR-109/110/113).
+GET {{host}}/assistant
+HTTP 200

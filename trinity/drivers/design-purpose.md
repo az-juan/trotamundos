@@ -40,10 +40,10 @@ de rastrear múltiples aplicaciones y bandejas de correo.
 
 ## 5. Alcance y límites
 
-- **En scope (Fase 0):** captura por email, agrupación por viaje, gestión manual, integración con
-  proveedores, compartición, **panel web HTMX/sqlc** (prototipo), analítica básica. El canal móvil
-  nativo se difiere a Fase 1 junto con el BFF JSON y JWT/OIDC (ADR-111).
-- **Fuera de scope (Fase 0):** pagos, reservas nuevas (solo lectura/gestión de existentes), **chat — se provee como Asistente Virtual en Fase 1 (FR-10/FR-11, ADR-109/110), no en el MVP—**, notificaciones push nativas (Fase 1), identidad independiente (Fase 2).
+- **En scope (Fase 0 completada + Inicio parcial de Fase 1):** captura por email, agrupación por viaje, gestión manual, integración con
+  proveedores, compartición, **panel web HTMX/sqlc** (prototipo Fase 0), analítica básica y **MVP determinista del Asistente Virtual (`/assistant`, inicio parcial de Fase 1 según ADR-109/110/113)**. El canal móvil
+  nativo se difiere al resto de Fase 1 junto con el BFF JSON, JWT/OIDC (ADR-111) y ClickHouse.
+- **Fuera de scope (Fase 0):** pagos, reservas nuevas (solo lectura/gestión de existentes), **chat en Fase 0 — se provee como Asistente Virtual al iniciar la Fase 1 parcial (FR-10/FR-11, ADR-109/110/113)—**, notificaciones push nativas (Fase 1 posterior), identidad independiente (Fase 2).
 - **Plataforma:** web (responsive) + iOS (Swift/SwiftUI) + Android (Kotlin/Compose).
 
 ## 6. Métricas de éxito

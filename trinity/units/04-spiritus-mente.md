@@ -20,7 +20,7 @@ bursty de CPU no degrade el SLA de 800 ms (QA-15, CQRS).
 - **analytics/** — ingestión **batch** detrás del puerto `AnalyticsRepository` (OLAP, dueño exclusivo de Spiritus, ADR-107):
   - **Polimorfismo por fase (ADR-107):** en **Fase 0** (`SPIRITUS_ANALYTICS_DRIVER=postgres`) inyecta el adaptador `PostgresAnalyticsRepo` sobre `spiritus.analytics_events` y `spiritus.insight_aggregates` (respetando el presupuesto de ~$80/mes); en **Fase 1** (`SPIRITUS_ANALYTICS_DRIVER=clickhouse`) inyecta `ClickHouseAnalyticsRepo` hacia el 2.º Droplet de ClickHouse sin tocar dominio ni casos de uso.
   - Consume **todos** los eventos de dominio (`booking.>`, `trip.>`) con el historial rico por `user_id`, `type`, `destination` y `segments`, y los pre-agrega.
-  - **Fase 1 (ADR-110):** consume `assistance.>` (`assistance.handoff_requested`, `assistance.resolved`) para calcular la tasa de resolución de primer nivel (QA-17) y el tiempo de derivación, sin tocar el OLTP.
+  - **Fase 1 parcial (Activo, ADR-110/113):** consume `assistance.>` (`assistance.handoff_requested`, `assistance.resolved`) con el consumidor durable `spiritus-assistance` para calcular la tasa de resolución de primer nivel (QA-17) sin tocar el OLTP.
   - Sirve el **read-model** de insights a Pater (dashboard, FR-7) y a partners anónimos (FR-9, monetización).
   - Expone métricas de lag de consumidor y tasa de "no matcheado" del parser.
 

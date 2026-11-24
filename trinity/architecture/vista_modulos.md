@@ -66,10 +66,10 @@ graph TD
 | **Filius ↔ Spiritus** | NATS JetStream (async) | Hechos de negocio (`booking.*`, `trip.*`) | Desacople de picos; cada consumidor reacciona (QA-3 / QA-5) |
 | **Spiritus → Pater** | read-model · SSE (referencia Fase 1); en Fase 0 Pater lee el esquema `spiritus` con sqlc | Insights y analítica | CQRS: analítica sin tocar el OLTP (QA-15) |
 
-> **Asistente Virtual (Fase 1, ADR-109/110):** `assistant/` se añade **dentro de Pater** y `assistance/`
-> **dentro de Filius**. No hay cuarta unidad ni cuarta arista: el chat usa `Pater↔Filius` (REST) para
-> consultar estado y crear el caso, y Filius publica `assistance.*` por la arista `Filius↔Spiritus`.
-> La sesión y el token de derivación viven en Redis (TTL), sin transcripción persistida.
+> **Asistente Virtual (Activo en inicio parcial de Fase 1, ADR-109/110/113):** `internal/assistant` se añade **dentro de Pater** y `internal/api/assistance.go`
+> **dentro de Filius**. No hay cuarta unidad ni cuarta arista: el chat usa `Pater↔Filius` (REST `/internal/assistance/cases`) para
+> coordinar la derivación, y Filius publica `assistance.*` por la arista `Filius↔Spiritus`.
+> La sesión (TTL 30 min) y el token de derivación (TTL 15 min) viven en Redis (`shared/cache`), sin transcripción persistida.
 >
 > **Information hiding (Parnas / Newman ch.2):** lo que cruza una arista es **contrato** (evento
 > versionado o endpoint OpenAPI), **nunca** el código interno de la otra unidad. Así el triángulo

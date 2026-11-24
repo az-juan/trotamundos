@@ -1,9 +1,9 @@
 # ADR-109: Asistente Virtual como módulo de Pater con clasificador de intenciones intercambiable
 
-* **Estado:** Aceptado
+* **Estado:** Aceptado (Implementado en inicio parcial de Fase 1 con clasificador determinista, ver [ADR-113](./adr-113-inicio-parcial-fase1-asistente-determinista.md))
 * **Fecha:** 2026-11-22
 * **Decidido por:** Equipo de arquitectura
-* **Iteración ADD:** IV (extensión de mejoras, CON-5; despliegue previsto en **Fase 1**)
+* **Iteración ADD:** IV (extensión de mejoras, CON-5; activo en **Fase 1 parcial**)
 
 ## Contexto y Planteamiento del Problema
 

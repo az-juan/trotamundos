@@ -21,9 +21,8 @@ En **Fase 0** consulta PostgreSQL con sqlc y renderiza HTML/HTMX (ADR-111); no c
   (arista Spiritus→Pater). i18n por región.
 - **mobile-bff/** — agregación **JSON** para las apps nativas (Swift/Kotlin) con Chi (ADR-013):
   *one BFF per experience*. Mismos contratos OpenAPI que la web, payload adaptado a móvil.
-- **assistant/** (Fase 1, ADR-109) — Asistente Virtual: clasificación de intenciones, consultas de
-  estado, reprogramación guiada y derivación de casos complejos. Usa `FiliusClient` (REST) y el
-  puerto `IntentClassifier` (LLM con ACL/redacción de PII, con fallback determinista).
+- **assistant/** (Activo en inicio parcial de Fase 1, ADR-109/113) — Asistente Virtual en `/assistant`: clasificación determinista de intenciones (`RuleBasedClassifier` detrás de `IntentClassifier`), redacción de PII (`RedactPII`), consultas de
+  estado, reprogramación guiada (`FR-6`) y derivación de casos complejos (`FR-11`). Usa sesión efímera en Redis (TTL 30 min) y `NotifyFiliusHandoff` (REST `Pater→Filius`).
 
 ## 2. Tecnologías
 

@@ -230,11 +230,11 @@ graph LR
 
 ## 6. Mapa de unidades → puertos de salida (resumen)
 
-| Unidad | Esquema PG | Cache | Publica (NATS) | Consume (NATS) | Cliente externo |
+| Unidad | Esquema PG | Cache | Publica (NATS) | Consume (NATS) | Cliente externo / inter-unidad |
 |--------|-----------|-------|----------------|----------------|-----------------|
-| **Pater** | lectura sqlc de `filius`/`spiritus` (ADR-111) | Redis previsto para Fase 1 | — | — | sin clientes HTTP internos en Fase 0 |
-| **Filius** | `filius` (escribe) | Redis (idempotencia) | `booking.confirmed/cancelled/disrupted`, `trip.*` | `booking.discovered` | Aerolíneas/hoteles/rentadoras (resiliente) |
-| **Spiritus** | `spiritus` (escribe) | Redis (dedup) | `booking.discovered` | `booking.*`, `trip.*` | Gmail API, IMAP |
+| **Pater** | lectura/escritura sqlc (ADR-111/113) | Redis (sesión efímera del Asistente, TTL 30 min) | — | — | REST interno a Filius (`/internal/assistance/*`, ADR-110/113) + teselas OpenStreetMap (ADR-112) |
+| **Filius** | `filius` (escribe) | Redis (`Idempotency-Key` y `context_token` TTL 15 min) | `booking.confirmed/cancelled/disrupted`, `trip.*`, `assistance.*` | `booking.discovered` | Aerolíneas/hoteles/rentadoras (resiliente) |
+| **Spiritus** | `spiritus` (escribe) | Redis (dedup) | `booking.discovered` | `booking.*`, `trip.*`, `assistance.*` | Gmail API, IMAP |
 
 ## 7. Observabilidad (métricas concretas)
 

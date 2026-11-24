@@ -16,14 +16,17 @@ type Querier interface {
 	AddSender(ctx context.Context, arg AddSenderParams) (AddSenderRow, error)
 	AnalyticsSummary(ctx context.Context) (AnalyticsSummaryRow, error)
 	ArchiveTrip(ctx context.Context, id pgtype.UUID) error
+	CreateAssistanceCase(ctx context.Context, arg CreateAssistanceCaseParams) (AssistanceCaseRow, error)
 	CreateShare(ctx context.Context, arg CreateShareParams) (CreateShareRow, error)
 	CreateTrip(ctx context.Context, arg CreateTripParams) (CreateTripRow, error)
 	FindBookingByRef(ctx context.Context, providerRef string) (FindBookingByRefRow, error)
+	GetAssistanceCase(ctx context.Context, id pgtype.UUID) (AssistanceCaseRow, error)
 	GetPreferences(ctx context.Context, id pgtype.UUID) ([]byte, error)
 	GetShare(ctx context.Context, token string) (GetShareRow, error)
 	GetTrip(ctx context.Context, id pgtype.UUID) (GetTripRow, error)
 	InsertAnalyticsEvent(ctx context.Context, arg InsertAnalyticsEventParams) error
 	ListAnalyticsEvents(ctx context.Context, maxItems int64) ([]ListAnalyticsEventsRow, error)
+	ListAssistanceCases(ctx context.Context) ([]AssistanceCaseRow, error)
 	ListBookingsForTrip(ctx context.Context, tripID pgtype.UUID) ([]ListBookingsForTripRow, error)
 	ListGeoPoints(ctx context.Context) ([]ListGeoPointsRow, error)
 	ListMailboxes(ctx context.Context) ([]ListMailboxesRow, error)
@@ -32,6 +35,7 @@ type Querier interface {
 	ListTrips(ctx context.Context, status string) ([]ListTripsRow, error)
 	NearbyTrips(ctx context.Context, arg NearbyTripsParams) ([]NearbyTripsRow, error)
 	RemoveSender(ctx context.Context, id pgtype.UUID) error
+	UpdateAssistanceCaseStatus(ctx context.Context, arg UpdateAssistanceCaseStatusParams) (AssistanceCaseRow, error)
 	UpdateBookingCoords(ctx context.Context, arg UpdateBookingCoordsParams) error
 	UpdateBookingStatus(ctx context.Context, arg UpdateBookingStatusParams) error
 	UpdatePreferences(ctx context.Context, arg UpdatePreferencesParams) error

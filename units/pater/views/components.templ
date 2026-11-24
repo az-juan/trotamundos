@@ -29,6 +29,7 @@ templ NavLinks(active string, signedIn bool) {
 	<a class={ NavClass(active, "calendar") } href="/calendar" hx-get="/calendar" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Calendario</a>
 	<a class={ NavClass(active, "mailboxes") } href="/mailboxes" hx-get="/mailboxes" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Buzones</a>
 	<a class={ NavClass(active, "whitelists") } href="/whitelists" hx-get="/whitelists" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Remitentes</a>
+	<a class={ NavClass(active, "assistant") } href="/assistant" hx-get="/assistant" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Asistente</a>
 	<a class={ NavClass(active, "preferences") } href="/preferences" hx-get="/preferences" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Preferencias</a>
 	if signedIn {
 		<button class="nav-link" type="button" hx-post="/demo/ingest" hx-target="#main-content" hx-swap="innerHTML">Simular correo</button>
@@ -50,7 +51,7 @@ templ Footer() {
 			<span class="footer-sep">◆</span>
 			<span>Un solo lugar para todos sus arreglos de viaje</span>
 			<span class="footer-sep">◆</span>
-			<span>Trinidad · Fase 0</span>
+			<span>Atención permanente al viajero</span>
 		</div>
 	</footer>
 }
@@ -195,7 +196,7 @@ templ Timeline(items []ActivityView) {
 			<li class="timeline-item">
 				<span class="timeline-dot"></span>
 				<div>
-					<strong>{ a.Type }</strong>
+					<strong>{ EventLabel(a.Type) }</strong>
 					<p>{ a.Summary }</p>
 					<time>{ a.OccurredAt }</time>
 				</div>

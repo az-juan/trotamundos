@@ -56,6 +56,19 @@ CREATE TABLE filius.itinerary_shares (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE filius.assistance_cases (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES filius.users(id) ON DELETE CASCADE,
+    trip_id     UUID REFERENCES filius.trips(id) ON DELETE SET NULL,
+    booking_id  UUID REFERENCES filius.bookings(id) ON DELETE SET NULL,
+    status      TEXT NOT NULL DEFAULT 'open',
+    reason      TEXT NOT NULL,
+    severity    TEXT NOT NULL,
+    agency_id   TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    resolved_at TIMESTAMPTZ
+);
+
 CREATE TABLE spiritus.mailboxes (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id      UUID NOT NULL,

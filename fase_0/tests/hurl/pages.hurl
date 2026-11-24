@@ -12,7 +12,7 @@ GET {{host}}/login
 HTTP 200
 [Asserts]
 body contains "Acceso al panel"
-body contains "Cookie firmada"
+body contains "Área privada del viajero"
 
 GET {{host}}/trips/view
 HTTP 200

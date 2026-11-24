@@ -74,3 +74,56 @@ SELECT t.id::text AS trip_id, t.name AS trip_name, t.status AS status,
 FROM filius.bookings b JOIN filius.trips t ON t.id = b.trip_id
 WHERE b.details->>'lat' IS NOT NULL AND b.details->>'lon' IS NOT NULL
 ORDER BY t.name, b.provider;
+
+-- name: CreateAssistanceCase :one
+INSERT INTO filius.assistance_cases (user_id, trip_id, booking_id, status, reason, severity, agency_id)
+VALUES (sqlc.arg(user_id)::uuid,
+        nullif(sqlc.arg(trip_id)::text, '')::uuid,
+        nullif(sqlc.arg(booking_id)::text, '')::uuid,
+        'open',
+        sqlc.arg(reason)::text,
+        sqlc.arg(severity)::text,
+        nullif(sqlc.arg(agency_id)::text, ''))
+RETURNING id::text AS id, user_id::text AS user_id,
+          coalesce(trip_id::text, '')::text AS trip_id,
+          coalesce(booking_id::text, '')::text AS booking_id,
+          status, reason, severity,
+          coalesce(agency_id, '')::text AS agency_id,
+          created_at::text AS created_at,
+          coalesce(resolved_at::text, '')::text AS resolved_at;
+
+-- name: GetAssistanceCase :one
+SELECT id::text AS id, user_id::text AS user_id,
+       coalesce(trip_id::text, '')::text AS trip_id,
+       coalesce(booking_id::text, '')::text AS booking_id,
+       status, reason, severity,
+       coalesce(agency_id, '')::text AS agency_id,
+       created_at::text AS created_at,
+       coalesce(resolved_at::text, '')::text AS resolved_at
+FROM filius.assistance_cases
+WHERE id = sqlc.arg(id)::uuid;
+
+-- name: ListAssistanceCases :many
+SELECT id::text AS id, user_id::text AS user_id,
+       coalesce(trip_id::text, '')::text AS trip_id,
+       coalesce(booking_id::text, '')::text AS booking_id,
+       status, reason, severity,
+       coalesce(agency_id, '')::text AS agency_id,
+       created_at::text AS created_at,
+       coalesce(resolved_at::text, '')::text AS resolved_at
+FROM filius.assistance_cases
+ORDER BY created_at DESC
+LIMIT 20;
+
+-- name: UpdateAssistanceCaseStatus :one
+UPDATE filius.assistance_cases
+SET status = sqlc.arg(status)::text,
+    resolved_at = CASE WHEN sqlc.arg(status)::text IN ('resolved', 'closed') THEN now() ELSE resolved_at END
+WHERE id = sqlc.arg(id)::uuid
+RETURNING id::text AS id, user_id::text AS user_id,
+          coalesce(trip_id::text, '')::text AS trip_id,
+          coalesce(booking_id::text, '')::text AS booking_id,
+          status, reason, severity,
+          coalesce(agency_id, '')::text AS agency_id,
+          created_at::text AS created_at,
+          coalesce(resolved_at::text, '')::text AS resolved_at;

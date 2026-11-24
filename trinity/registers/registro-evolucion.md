@@ -256,6 +256,26 @@ Changelog cronológico de los cambios de documentación de la arquitectura **Tri
 
 ---
 
+## 2026-11-23 — Inicio parcial de Fase 1: MVP determinista del Asistente Virtual y portabilidad de scripts (ADR-113)
+
+- **Tipo:** transición incremental a **Fase 1 parcial** (Disparador 5 de `transiciones.md`), nueva decisión MADR ([ADR-113](../adrs/adr-113-inicio-parcial-fase1-asistente-determinista.md)), implementación del MVP determinista del Asistente Virtual y corrección de portabilidad/preflight en `./scripts/`.
+- **Motivación arquitectónica:** se acordó que el Asistente Virtual (`FR-10`, `FR-11`, `QA-16`, `QA-17`) pertenece a la **Fase 1** (`design-purpose.md` §5). En cumplimiento de la **Regla 1** (*No adelantarse*) y **Regla 3** (*Sobriedad Operativa / YAGNI*) de `SPEC_ARCHITECTURE.md`, se inicia la Fase 1 de forma parcial implementando **únicamente el Asistente Virtual** con un clasificador determinista (`RuleBasedClassifier` detrás del puerto `IntentClassifier`, sin LLM externo), manteniendo ClickHouse (`DT-01`) y el Mobile BFF (`DT-08`) pendientes de sus propios disparadores.
+- **Artefactos nuevos:**
+  - `trinity/adrs/adr-113-inicio-parcial-fase1-asistente-determinista.md` — MADR con 3 opciones evaluadas y auditoría de consistencia del Paso 0.
+  - `fase_1/README.md` y `fase_1/tests/hurl/assistant.hurl` — documentación y pruebas E2E del inicio parcial de Fase 1, sin duplicar `fase_0/deploy/`.
+  - `shared/cache/redis.go` — cliente RESP ligero para Redis 7 con TTL y consumo atómico (`GETDEL`) del `context_token` de un solo uso, con fallback en memoria para tests unitarios.
+  - `units/pater/internal/assistant/assistant.go` y `assistant_test.go` — puerto `IntentClassifier`, adaptador `RuleBasedClassifier`, redacción de PII (`RedactPII`), sesión efímera en Redis (TTL 30 min) y cliente REST hacia Filius.
+  - `units/filius/internal/api/assistance.go` — endpoints REST internos (`/internal/assistance/cases*`, `/internal/assistance/tier1`), emisión del `context_token` (TTL 15 min en Redis), deep-link a la agencia preferida (`FR-6`) y publicación de `assistance.handoff_requested` y `assistance.resolved` en NATS JetStream.
+- **Artefactos actualizados:**
+  - `db/schema.sql`, `db/queries/trips.sql` y `shared/db/` — tabla `filius.assistance_cases` y consultas SQL tipadas (`CreateAssistanceCase`, `GetAssistanceCase`, `ListAssistanceCases`, `UpdateAssistanceCaseStatus`).
+  - `units/spiritus/cmd/spiritus/main.go` — suscripción durable `spiritus-assistance` al subject `assistance.>` en NATS JetStream.
+  - `units/pater/views/{types.go,components.templ,pages.templ}`, `internal/logic/logic.go` y `internal/web/{handlers.go,handlers_test.go}` — enlace «Asistente» (`/assistant`) en la barra de navegación y vista HTMX del Mostrador de Asistencia.
+  - `scripts/{gen.sh,run.sh,seed.sh,hurl.sh}` — resolución dinámica de la versión de `templ` desde `go.mod`, eliminación de rutas locales hardcodeadas, preflight con auto-arranque de contenedores y limpieza de `trap` en `run.sh` para evitar recursión de señales (`SIGSEGV`).
+- **Verificación:** `./scripts/test.sh` en verde en los 4 módulos Go (`shared`, `filius`, `spiritus`, `pater`) y suite Hurl actualizada con `fase_1/tests/hurl/assistant.hurl`.
+- **Trazabilidad:** SPEC-001 Reglas 1, 2, 3, 4 y Paso 8; ADR-109, ADR-110, ADR-111, ADR-113; FR-6, FR-10, FR-11, QA-9, QA-15, QA-16, QA-17.
+
+---
+
 ## Futuro (borrador — anotar al concretar)
 
 - Extracción de **Notification** como módulo de Spiritus (Fase 1) → actualizar `units/04` y `05`.

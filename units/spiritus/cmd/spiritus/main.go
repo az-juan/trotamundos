@@ -30,6 +30,7 @@ func main() {
 		for _, sub := range []struct{ subject, durable string }{
 			{"booking.>", "spiritus-bookings"},
 			{"trip.>", "spiritus-trips"},
+			{"assistance.>", "spiritus-assistance"},
 		} {
 			go func(subject, durable string) {
 				if err := event.Subscribe(ctx, natsURL, subject, durable, func(e event.Event) error {

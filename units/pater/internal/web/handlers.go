@@ -6,14 +6,17 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
+	"trotamundos/pater/internal/assistant"
 	"trotamundos/pater/views"
 )
 
@@ -40,6 +43,11 @@ type Store interface {
 	Senders(ctx context.Context) ([]views.SenderView, error)
 	AddSender(ctx context.Context, sender string) error
 	RemoveSender(ctx context.Context, id string) error
+	AssistanceCases(ctx context.Context) ([]views.AssistanceCaseView, error)
+	GetAssistanceCase(ctx context.Context, id string) (views.AssistanceCaseView, error)
+	CreateAssistanceCase(ctx context.Context, tripID, bookingID, reason, severity, agencyID string) (views.AssistanceCaseView, error)
+	UpdateAssistanceCaseStatus(ctx context.Context, id, status string) (views.AssistanceCaseView, error)
+	RecordTier1Resolution(ctx context.Context, intent string) error
 }
 
 type MapRenderer interface {
@@ -49,6 +57,7 @@ type MapRenderer interface {
 type Handlers struct {
 	Store       Store
 	MapRenderer MapRenderer
+	Classifier  assistant.IntentClassifier
 }
 
 type component interface {
@@ -219,6 +228,11 @@ func (h *Handlers) Handler() http.Handler {
 	r.Get("/map", h.mapPage)
 	r.Get("/map/image", h.mapImage)
 	r.Get("/calendar", h.calendar)
+	r.Get("/assistant", h.assistantPage)
+	r.Post("/assistant/messages", h.assistantMessage)
+	r.Get("/assistant/cases/{id}", h.assistantGetCase)
+	r.Post("/assistant/cases/{id}/handoff", h.assistantHandoffCase)
+	r.Post("/assistant/cases/{id}/resolve", h.assistantResolveCase)
 	r.Get("/login", func(w http.ResponseWriter, req *http.Request) {
 		h.page(w, req, "Trotamundos · Acceso", "panel", views.LoginPage(""))
 	})
@@ -486,4 +500,180 @@ func (h *Handlers) calendar(w http.ResponseWriter, req *http.Request) {
 	month := views.ParseMonth(req.URL.Query().Get("month"))
 	cal := views.BuildCalendar(trips, month)
 	h.page(w, req, "Trotamundos · Calendario", "calendar", views.CalendarPage(cal))
+}
+
+func (h *Handlers) classifier() assistant.IntentClassifier {
+	if h.Classifier != nil {
+		return h.Classifier
+	}
+	return assistant.RuleBasedClassifier{}
+}
+
+func (h *Handlers) assistantSessionID(req *http.Request) string {
+	if u := h.currentUser(req); u.ID != "" {
+		return u.ID
+	}
+	return "demo-session"
+}
+
+func (h *Handlers) assistantData(ctx context.Context, req *http.Request, notice string) views.AssistantPageData {
+	sid := h.assistantSessionID(req)
+	userID := "00000000-0000-0000-0000-000000000001"
+	if u := h.currentUser(req); u.ID != "" {
+		userID = u.ID
+	}
+	agency := "agencia-austral"
+	if prefs, err := h.Store.Preferences(ctx, userID); err == nil && prefs.PreferredAgency != "" {
+		agency = prefs.PreferredAgency
+	}
+	trips, _ := h.Store.Trips(ctx, "")
+	cases, _ := h.Store.AssistanceCases(ctx)
+	return views.AssistantPageData{
+		SessionID:       sid,
+		PreferredAgency: agency,
+		Turns:           assistant.LoadTurns(sid),
+		Cases:           cases,
+		Trips:           trips,
+		Notice:          notice,
+	}
+}
+
+func (h *Handlers) assistantPage(w http.ResponseWriter, req *http.Request) {
+	h.page(w, req, "Trotamundos · Asistente Virtual", "assistant", views.AssistantPage(h.assistantData(req.Context(), req, "")))
+}
+
+func selectRelevantTrip(trips []views.TripView, tripID, message string) views.TripView {
+	if len(trips) == 0 {
+		return views.TripView{}
+	}
+	for _, t := range trips {
+		if tripID != "" && t.ID == tripID {
+			return t
+		}
+	}
+	lower := strings.ToLower(message)
+	for _, t := range trips {
+		if strings.Contains(lower, strings.ToLower(t.Name)) {
+			return t
+		}
+		for _, b := range t.Bookings {
+			if strings.Contains(lower, strings.ToLower(b.ProviderRef)) || strings.Contains(lower, strings.ToLower(b.Provider)) {
+				return t
+			}
+		}
+	}
+	return trips[0]
+}
+
+func (h *Handlers) assistantMessage(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		http.Error(w, "formulario inválido", http.StatusBadRequest)
+		return
+	}
+	rawMsg := strings.TrimSpace(req.FormValue("message"))
+	if rawMsg == "" {
+		http.Error(w, "mensaje vacío", http.StatusBadRequest)
+		return
+	}
+	tripID := strings.TrimSpace(req.FormValue("trip_id"))
+	redacted := assistant.RedactPII(rawMsg)
+	cls := h.classifier().Classify(req.Context(), redacted)
+
+	ctx := req.Context()
+	corrID := w.Header().Get("X-Correlation-ID")
+	data := h.assistantData(ctx, req, "")
+	turn := views.AssistantTurnView{
+		UserMessage:   redacted,
+		Intent:        string(cls.Intent),
+		Tier1Resolved: cls.Intent != assistant.IntentComplexHandoff,
+	}
+
+	switch cls.Intent {
+	case assistant.IntentStatusQuery:
+		if len(data.Trips) == 0 {
+			turn.Answer = "Actualmente no tiene viajes registrados en su carpeta. Puede agregar un viaje desde el Panel o conectar su correo electrónico."
+		} else {
+			t := selectRelevantTrip(data.Trips, tripID, rawMsg)
+			turn.Answer = fmt.Sprintf("Su viaje «%s» se encuentra %s y cuenta con %d reserva(s) asociada(s).", t.Name, strings.ToLower(views.StatusLabel(t.Status)), len(t.Bookings))
+			if len(t.Bookings) > 0 {
+				b := t.Bookings[0]
+				turn.Answer += fmt.Sprintf(" Reserva destacada: %s (código %s), en estado %s.", b.Provider, b.ProviderRef, strings.ToLower(views.StatusLabel(b.Status)))
+			}
+		}
+		_ = h.Store.RecordTier1Resolution(ctx, string(cls.Intent))
+		assistant.NotifyFiliusTier1(ctx, data.SessionID, cls.Intent, corrID)
+
+	case assistant.IntentRescheduleGuidance:
+		ref := "PNR-1930"
+		provider := "la compañía"
+		if t := selectRelevantTrip(data.Trips, tripID, rawMsg); len(t.Bookings) > 0 {
+			ref = t.Bookings[0].ProviderRef
+			provider = t.Bookings[0].Provider
+		}
+		turn.Answer = fmt.Sprintf("Para modificar las fechas o el horario de su reserva %s con %s, le facilitamos el acceso directo al sitio oficial del proveedor. Una vez que confirme el cambio allí, su itinerario se actualizará aquí automáticamente.", ref, provider)
+		turn.DeepLinkURL = "https://proveedores.trotamundos.app/reprogramar?ref=" + ref
+		turn.ActionLabel = "Ir al sitio de " + provider + " (" + ref + ") →"
+		_ = h.Store.RecordTier1Resolution(ctx, string(cls.Intent))
+		assistant.NotifyFiliusTier1(ctx, data.SessionID, cls.Intent, corrID)
+
+	case assistant.IntentMinorIssue:
+		turn.Answer = "Para su tranquilidad: le recomendamos presentarse con 2 horas de anticipación en viajes nacionales y 3 horas en internacionales con su documentación al día. El equipaje de mano estándar permite llevar una pieza de hasta 10 kg en cabina."
+		_ = h.Store.RecordTier1Resolution(ctx, string(cls.Intent))
+		assistant.NotifyFiliusTier1(ctx, data.SessionID, cls.Intent, corrID)
+
+	case assistant.IntentComplexHandoff:
+		created, err := h.Store.CreateAssistanceCase(ctx, tripID, "", cls.Reason, cls.Severity, data.PreferredAgency)
+		handoff, fErr := assistant.NotifyFiliusHandoff(ctx, "00000000-0000-0000-0000-000000000001", tripID, "", cls.Reason, cls.Severity, data.PreferredAgency, corrID)
+		caseID := created.ID
+		deepLink := fmt.Sprintf("https://agencias.trotamundos.app/%s/handoff?case_id=%s", data.PreferredAgency, caseID)
+		if fErr == nil && handoff.DeepLinkURL != "" {
+			deepLink = handoff.DeepLinkURL
+			if caseID == "" {
+				caseID = handoff.Case.ID
+			}
+		}
+		if err != nil && caseID == "" {
+			caseID = "local-case"
+		}
+		turn.Tier1Resolved = false
+		turn.CaseID = caseID
+		turn.DeepLinkURL = deepLink
+		turn.ActionLabel = "Continuar atención con " + data.PreferredAgency + " →"
+		turn.Answer = fmt.Sprintf("Su solicitud requiere atención personalizada de un agente. Hemos registrado la gestión #%s y preparado el enlace directo con su agencia «%s» compartiendo únicamente los datos esenciales de su viaje.", caseID, data.PreferredAgency)
+
+	default:
+		turn.Answer = "Bienvenido al Mostrador de Asistencia de Trotamundos. Puedo informarle sobre el estado de sus viajes y reservas, guiarle para cambiar fechas con su proveedor, resolver dudas de equipaje o embarque, o comunicarle con su agencia de viajes de confianza."
+		_ = h.Store.RecordTier1Resolution(ctx, string(cls.Intent))
+		assistant.NotifyFiliusTier1(ctx, data.SessionID, cls.Intent, corrID)
+	}
+
+	assistant.AppendTurn(data.SessionID, turn)
+	updated := h.assistantData(ctx, req, "Su consulta fue respondida.")
+	h.page(w, req, "Trotamundos · Asistente Virtual", "assistant", views.AssistantPage(updated))
+}
+
+func (h *Handlers) assistantGetCase(w http.ResponseWriter, req *http.Request) {
+	c, err := h.Store.GetAssistanceCase(req.Context(), chi.URLParam(req, "id"))
+	if err != nil {
+		http.Error(w, "Caso no encontrado", http.StatusNotFound)
+		return
+	}
+	data := h.assistantData(req.Context(), req, fmt.Sprintf("Gestión #%s en estado: %s", c.ID, views.StatusLabel(c.Status)))
+	h.page(w, req, "Trotamundos · Asistente Virtual", "assistant", views.AssistantPage(data))
+}
+
+func (h *Handlers) assistantHandoffCase(w http.ResponseWriter, req *http.Request) {
+	id := chi.URLParam(req, "id")
+	_, _ = h.Store.UpdateAssistanceCaseStatus(req.Context(), id, "handed_off")
+	assistant.NotifyFiliusCaseAction(req.Context(), id, "handoff", w.Header().Get("X-Correlation-ID"))
+	data := h.assistantData(req.Context(), req, "Su agencia de viajes ha recibido la solicitud y está atendiendo su caso.")
+	h.page(w, req, "Trotamundos · Asistente Virtual", "assistant", views.AssistantPage(data))
+}
+
+func (h *Handlers) assistantResolveCase(w http.ResponseWriter, req *http.Request) {
+	id := chi.URLParam(req, "id")
+	_, _ = h.Store.UpdateAssistanceCaseStatus(req.Context(), id, "resolved")
+	assistant.NotifyFiliusCaseAction(req.Context(), id, "resolve", w.Header().Get("X-Correlation-ID"))
+	data := h.assistantData(req.Context(), req, "La gestión fue marcada como resuelta. ¡Buen viaje!")
+	h.page(w, req, "Trotamundos · Asistente Virtual", "assistant", views.AssistantPage(data))
 }

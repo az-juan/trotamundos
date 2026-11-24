@@ -400,3 +400,176 @@ func (q *Queries) UpdateBookingStatus(ctx context.Context, arg UpdateBookingStat
 	_, err := q.db.Exec(ctx, updateBookingStatus, arg.Status, arg.ProviderRef)
 	return err
 }
+
+const createAssistanceCase = `-- name: CreateAssistanceCase :one
+INSERT INTO filius.assistance_cases (user_id, trip_id, booking_id, status, reason, severity, agency_id)
+VALUES ($1::uuid,
+        nullif($2::text, '')::uuid,
+        nullif($3::text, '')::uuid,
+        'open',
+        $4::text,
+        $5::text,
+        nullif($6::text, ''))
+RETURNING id::text AS id, user_id::text AS user_id,
+          coalesce(trip_id::text, '')::text AS trip_id,
+          coalesce(booking_id::text, '')::text AS booking_id,
+          status, reason, severity,
+          coalesce(agency_id, '')::text AS agency_id,
+          created_at::text AS created_at,
+          coalesce(resolved_at::text, '')::text AS resolved_at
+`
+
+type CreateAssistanceCaseParams struct {
+	UserID    pgtype.UUID `json:"user_id"`
+	TripID    string      `json:"trip_id"`
+	BookingID string      `json:"booking_id"`
+	Reason    string      `json:"reason"`
+	Severity  string      `json:"severity"`
+	AgencyID  string      `json:"agency_id"`
+}
+
+type AssistanceCaseRow struct {
+	ID         string `json:"id"`
+	UserID     string `json:"user_id"`
+	TripID     string `json:"trip_id"`
+	BookingID  string `json:"booking_id"`
+	Status     string `json:"status"`
+	Reason     string `json:"reason"`
+	Severity   string `json:"severity"`
+	AgencyID   string `json:"agency_id"`
+	CreatedAt  string `json:"created_at"`
+	ResolvedAt string `json:"resolved_at"`
+}
+
+func (q *Queries) CreateAssistanceCase(ctx context.Context, arg CreateAssistanceCaseParams) (AssistanceCaseRow, error) {
+	row := q.db.QueryRow(ctx, createAssistanceCase,
+		arg.UserID,
+		arg.TripID,
+		arg.BookingID,
+		arg.Reason,
+		arg.Severity,
+		arg.AgencyID,
+	)
+	var i AssistanceCaseRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TripID,
+		&i.BookingID,
+		&i.Status,
+		&i.Reason,
+		&i.Severity,
+		&i.AgencyID,
+		&i.CreatedAt,
+		&i.ResolvedAt,
+	)
+	return i, err
+}
+
+const getAssistanceCase = `-- name: GetAssistanceCase :one
+SELECT id::text AS id, user_id::text AS user_id,
+       coalesce(trip_id::text, '')::text AS trip_id,
+       coalesce(booking_id::text, '')::text AS booking_id,
+       status, reason, severity,
+       coalesce(agency_id, '')::text AS agency_id,
+       created_at::text AS created_at,
+       coalesce(resolved_at::text, '')::text AS resolved_at
+FROM filius.assistance_cases
+WHERE id = $1::uuid
+`
+
+func (q *Queries) GetAssistanceCase(ctx context.Context, id pgtype.UUID) (AssistanceCaseRow, error) {
+	row := q.db.QueryRow(ctx, getAssistanceCase, id)
+	var i AssistanceCaseRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TripID,
+		&i.BookingID,
+		&i.Status,
+		&i.Reason,
+		&i.Severity,
+		&i.AgencyID,
+		&i.CreatedAt,
+		&i.ResolvedAt,
+	)
+	return i, err
+}
+
+const listAssistanceCases = `-- name: ListAssistanceCases :many
+SELECT id::text AS id, user_id::text AS user_id,
+       coalesce(trip_id::text, '')::text AS trip_id,
+       coalesce(booking_id::text, '')::text AS booking_id,
+       status, reason, severity,
+       coalesce(agency_id, '')::text AS agency_id,
+       created_at::text AS created_at,
+       coalesce(resolved_at::text, '')::text AS resolved_at
+FROM filius.assistance_cases
+ORDER BY created_at DESC
+LIMIT 20
+`
+
+func (q *Queries) ListAssistanceCases(ctx context.Context) ([]AssistanceCaseRow, error) {
+	rows, err := q.db.Query(ctx, listAssistanceCases)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AssistanceCaseRow{}
+	for rows.Next() {
+		var i AssistanceCaseRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.TripID,
+			&i.BookingID,
+			&i.Status,
+			&i.Reason,
+			&i.Severity,
+			&i.AgencyID,
+			&i.CreatedAt,
+			&i.ResolvedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	return items, rows.Err()
+}
+
+const updateAssistanceCaseStatus = `-- name: UpdateAssistanceCaseStatus :one
+UPDATE filius.assistance_cases
+SET status = $1::text,
+    resolved_at = CASE WHEN $1::text IN ('resolved', 'closed') THEN now() ELSE resolved_at END
+WHERE id = $2::uuid
+RETURNING id::text AS id, user_id::text AS user_id,
+          coalesce(trip_id::text, '')::text AS trip_id,
+          coalesce(booking_id::text, '')::text AS booking_id,
+          status, reason, severity,
+          coalesce(agency_id, '')::text AS agency_id,
+          created_at::text AS created_at,
+          coalesce(resolved_at::text, '')::text AS resolved_at
+`
+
+type UpdateAssistanceCaseStatusParams struct {
+	Status string      `json:"status"`
+	ID     pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateAssistanceCaseStatus(ctx context.Context, arg UpdateAssistanceCaseStatusParams) (AssistanceCaseRow, error) {
+	row := q.db.QueryRow(ctx, updateAssistanceCaseStatus, arg.Status, arg.ID)
+	var i AssistanceCaseRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TripID,
+		&i.BookingID,
+		&i.Status,
+		&i.Reason,
+		&i.Severity,
+		&i.AgencyID,
+		&i.CreatedAt,
+		&i.ResolvedAt,
+	)
+	return i, err
+}

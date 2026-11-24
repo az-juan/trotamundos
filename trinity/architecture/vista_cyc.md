@@ -208,5 +208,4 @@ sequenceDiagram
   email-ingest↔analytics (Spiritus) se comunican por **llamada en proceso**. Solo las 3 aristas del
   triángulo cruzan procesos.
 - Ver detalle por unidad en `adrs/adr-102` (módulos) y `adrs/adr-103` (conectores).
-- **Asistente Virtual (Fase 1, ADR-109/110): no añade conectores.** El LLM y la agencia son actores
-  externos; Pater solo habla REST con Filius y Filius publica `assistance.*` en la arista NATS ya existente.
+- **Asistente Virtual (Activo en inicio parcial de Fase 1, ADR-109/110/113): no añade conectores.** Opera con el clasificador determinista `RuleBasedClassifier` detrás de `IntentClassifier`; Pater habla REST con Filius (`/internal/assistance/*`) y Filius publica `assistance.*` en la arista NATS ya existente hacia Spiritus.

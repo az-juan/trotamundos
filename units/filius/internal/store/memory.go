@@ -17,6 +17,8 @@ type Memory struct {
 	users     map[string]*User
 	shares    map[string]domain.Share
 	travelers map[string][]domain.Traveler
+	cases     map[string]*AssistanceCase
+	caseOrder []string
 }
 
 func New() *Memory {
@@ -26,6 +28,8 @@ func New() *Memory {
 		users:     map[string]*User{},
 		shares:    map[string]domain.Share{},
 		travelers: map[string][]domain.Traveler{},
+		cases:     map[string]*AssistanceCase{},
+		caseOrder: []string{},
 	}
 }
 

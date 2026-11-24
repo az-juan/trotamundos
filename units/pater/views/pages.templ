@@ -52,7 +52,7 @@ templ TripActions(tripID string) {
 
 templ InsightsPage(data InsightPageData) {
 	<div class="page-shell narrow">
-		@PageHeading("Spiritus", "Boletín de la Mente", "FR-7 · QA-15")
+		@PageHeading("Crónica de viajes", "Boletín de actividad", "Resumen general de sus itinerarios")
 		@InsightsPanel(data.Insights)
 		@ActivityFeed(data.Activity)
 	</div>
@@ -60,7 +60,7 @@ templ InsightsPage(data InsightPageData) {
 
 templ MailboxesPage(items []MailboxView, notice string) {
 	<div class="page-shell narrow">
-		@PageHeading("Spiritus", "Buzones conectados", "FR-2 · QA-9")
+		@PageHeading("Correspondencia", "Buzones conectados", "Recepción automática de confirmaciones")
 		@Notice(notice)
 		@Panel("Vincular buzón", ConnectMailboxForm())
 		@Panel("Buzones", MailboxList(items))
@@ -92,7 +92,7 @@ templ MailboxList(items []MailboxView) {
 
 templ WhitelistsPage(items []SenderView, notice string) {
 	<div class="page-shell narrow">
-		@PageHeading("Spiritus", "Remitentes seguros", "FR-3 · QA-9")
+		@PageHeading("Correspondencia", "Remitentes seguros", "Aerolíneas, hoteles y agencias de confianza")
 		@Notice(notice)
 		@Panel("Agregar remitente", AddSenderForm())
 		@Panel("Lista blanca", SenderList(items))
@@ -122,7 +122,7 @@ templ SenderList(items []SenderView) {
 
 templ PreferencesPage(p PreferencesData, notice string) {
 	<div class="page-shell narrow">
-		@PageHeading("Viajero", "Preferencias personales", "ADR-106")
+		@PageHeading("Mi cuenta", "Preferencias personales", "Ajustes de idioma, moneda y agencia")
 		@Notice(notice)
 		@Panel("Datos del expediente", PreferencesForm(p))
 	</div>
@@ -133,7 +133,7 @@ templ PreferencesForm(p PreferencesData) {
 		@Field("Idioma", "locale", p.Locale, "", "select", false)
 		@Field("Moneda", "currency", p.Currency, "USD", "text", true)
 		@Field("Radio GPS (km)", "gps_radius_km", p.GpsRadius, "50", "number", false)
-		@Field("Agencia preferida", "preferred_agency_id", p.PreferredAgency, "ID de la agencia", "text", false)
+		@Field("Agencia preferida", "preferred_agency_id", p.PreferredAgency, "Ej. Agencia Austral", "text", false)
 		@SubmitButton("Guardar preferencias", "btn-brass")
 	</form>
 }
@@ -148,7 +148,7 @@ templ SharedPage(data SharedData) {
 
 templ LoginPage(notice string) {
 	<div class="page-shell narrow">
-		@PageHeading("Oficina central", "Acceso al panel", "Cookie firmada")
+		@PageHeading("Oficina central", "Acceso al panel", "Área privada del viajero")
 		@Notice(notice)
 		@Panel("Identifíquese", LoginForm())
 	</div>
@@ -165,7 +165,7 @@ templ LoginForm() {
 
 templ NearbyPage(data NearbyData) {
 	<div class="page-shell narrow">
-		@PageHeading("Geolocalización", "Reservas cercanas", "QA-13 · permiso explícito")
+		@PageHeading("Geolocalización", "Reservas cercanas", "Búsqueda por ubicación")
 		@Panel("Coordenadas", NearbyForm(data))
 		@TripList(data.Trips, "", false)
 	</div>
@@ -224,6 +224,102 @@ templ MapLegend(data MapPageData) {
 		<li><span class="legend-dot legend-slate"></span> En curso ({ fmtInt(data.Counts["active"]) })</li>
 		<li><span class="legend-dot legend-bordeaux"></span> Archivados ({ fmtInt(data.Counts["archived"]) })</li>
 		<li><span class="legend-line"></span> Traza entre reservas del mismo viaje</li>
-		<li><span class="legend-note">Imagen generada en servidor con go-staticmaps · sin JavaScript</span></li>
+		<li><span class="legend-note">Cartografía elaborada por la Oficina Central · Datos de OpenStreetMap</span></li>
 	</ul>
+}
+
+templ AssistantPage(data AssistantPageData) {
+	<div class="page-shell narrow">
+		@PageHeading("Atención al viajero", "Mostrador de Asistencia", "Consultas rápidas, cambios y gestiones con su agencia")
+		@Notice(data.Notice)
+		<div class="detail-grid">
+			<div>
+				@Panel("¿En qué podemos ayudarle hoy?", AssistantForm(data))
+				@Panel("Conversación actual", AssistantThread(data.Turns))
+			</div>
+			<aside class="right-rail">
+				@Panel("Su agencia de viajes de confianza", AssistantAgencyCard(data.PreferredAgency))
+				@Panel("Gestiones enviadas a su agencia", AssistantCaseList(data.Cases))
+			</aside>
+		</div>
+	</div>
+}
+
+templ AssistantForm(data AssistantPageData) {
+	<form class="vintage-form" hx-post="/assistant/messages" hx-target="#main-content" hx-swap="innerHTML">
+		if len(data.Trips) > 0 {
+			<label class="field">
+				<span>Viaje sobre el que consulta (opcional)</span>
+				<select name="trip_id">
+					<option value="">— Todos mis viajes —</option>
+					for _, t := range data.Trips {
+						<option value={ t.ID }>{ t.Name } ({ StatusLabel(t.Status) })</option>
+					}
+				</select>
+			</label>
+		}
+		@Field("Su consulta", "message", "", "Ej.: ¿En qué estado están mis reservas para Madrid?", "text", true)
+		@SubmitButton("Enviar consulta", "btn-brass")
+	</form>
+	<div class="filters" role="group" aria-label="Consultas frecuentes">
+		<button class="filter-chip" type="button" hx-post="/assistant/messages" hx-vals='{"message":"¿En qué estado están mis próximos viajes y reservas?"}' hx-target="#main-content" hx-swap="innerHTML">Consultar estado de mis reservas</button>
+		<button class="filter-chip" type="button" hx-post="/assistant/messages" hx-vals='{"message":"Necesito cambiar la fecha de mi vuelo"}' hx-target="#main-content" hx-swap="innerHTML">Cambiar fecha de un viaje</button>
+		<button class="filter-chip" type="button" hx-post="/assistant/messages" hx-vals='{"message":"¿Qué equipaje y documentos necesito para el check-in?"}' hx-target="#main-content" hx-swap="innerHTML">Equipaje y documentación</button>
+		<button class="filter-chip" type="button" hx-post="/assistant/messages" hx-vals='{"message":"Solicito un reembolso y gestión especial con mi agencia"}' hx-target="#main-content" hx-swap="innerHTML">Solicitar gestión a mi agencia</button>
+	</div>
+}
+
+templ AssistantThread(turns []AssistantTurnView) {
+	<div id="assistant-thread">
+		if len(turns) == 0 {
+			@EmptyState("Aún no ha iniciado una conversación. Escriba su consulta arriba o elija una de las opciones frecuentes.")
+		} else {
+			<ol class="timeline">
+				for _, turn := range turns {
+					<li class="timeline-item">
+						<span class="timeline-dot"></span>
+						<div>
+							<strong>Usted: { turn.UserMessage }</strong>
+							<p><span class="stamp">{ IntentLabel(turn.Intent) }</span></p>
+							<p>{ turn.Answer }</p>
+							if turn.DeepLinkURL != "" {
+								<p>
+									<a class="btn btn-small" href={ turn.DeepLinkURL } target="_blank" rel="noopener noreferrer">{ turn.ActionLabel }</a>
+								</p>
+							}
+						</div>
+					</li>
+				}
+			</ol>
+		}
+	</div>
+}
+
+templ AssistantAgencyCard(agency string) {
+	<p>Agencia asignada: <strong>{ agency }</strong></p>
+	<p class="rail-footnote">Puede elegir otra agencia en <a href="/preferences" hx-get="/preferences" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Preferencias</a>. Para su tranquilidad, cuando una gestión requiere atención personalizada enviamos a su agencia únicamente los datos esenciales del viaje.</p>
+}
+
+templ AssistantCaseList(cases []AssistanceCaseView) {
+	<div id="assistant-cases">
+		<ul class="data-list">
+			if len(cases) == 0 {
+				<li class="booking-empty">No hay gestiones pendientes con su agencia.</li>
+			}
+			for _, c := range cases {
+				<li>
+					<div>
+						<strong>Gestión #{ c.ID }</strong> · <span class="stamp">{ StatusLabel(c.Status) }</span>
+						<p>Agencia: <strong>{ c.AgencyID }</strong> · { ReasonLabel(c.Reason) } ({ SeverityLabel(c.Severity) })</p>
+						if c.Status == "open" {
+							<button class="btn btn-small" type="button" hx-post={ "/assistant/cases/" + c.ID + "/handoff" } hx-target="#main-content" hx-swap="innerHTML">Confirmar recepción por la agencia</button>
+						}
+						if c.Status == "open" || c.Status == "handed_off" {
+							<button class="btn btn-small ghost" type="button" hx-post={ "/assistant/cases/" + c.ID + "/resolve" } hx-target="#main-content" hx-swap="innerHTML">Marcar como resuelto</button>
+						}
+					</div>
+				</li>
+			}
+		</ul>
+	</div>
 }

@@ -29,6 +29,7 @@ services:
       - PATER_PG_DSN=postgres://pater_app:pater_dev@postgres:5432/trotamundos?sslmode=disable
       - FILIUS_URL=http://filius:8081
       - SPIRITUS_URL=http://spiritus:8082
+      - REDIS_ADDR=redis:6379
     ports: ["${PATER_HOST_PORT:-8090}:8080"]
     depends_on:
       filius:
@@ -52,6 +53,7 @@ services:
       - FILIUS_PORT=8081
       - SPIRITUS_URL=http://spiritus:8082
       - NATS_URL=nats://nats:4222
+      - REDIS_ADDR=redis:6379
     ports: ["8081:8081"]
     depends_on:
       nats:

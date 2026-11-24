@@ -51,6 +51,6 @@ COMMON=(
   --variable "sig_restore=${SIG_RESTORE}"
 )
 
-echo "== Hurl Fase 0 =="
-"$HURL" "${COMMON[@]}" --test "$ROOT"/fase_0/tests/hurl/*.hurl
-echo "Hurl: todos los flujos Fase 0 pasaron."
+echo "== Hurl Fase 0 + Inicio Parcial Fase 1 (Asistente Virtual) =="
+"$HURL" "${COMMON[@]}" --test "$ROOT"/fase_0/tests/hurl/*.hurl "$ROOT"/fase_1/tests/hurl/*.hurl
+echo "Hurl: todos los flujos Fase 0 y Fase 1 (Asistente) pasaron."

@@ -15,11 +15,13 @@ import (
 )
 
 const (
-	BookingDiscovered = "booking.discovered"
-	BookingConfirmed  = "booking.confirmed"
-	BookingCancelled  = "booking.cancelled"
-	TripArchived      = "trip.archived"
-	TripDisrupted     = "trip.disrupted"
+	BookingDiscovered          = "booking.discovered"
+	BookingConfirmed           = "booking.confirmed"
+	BookingCancelled           = "booking.cancelled"
+	TripArchived               = "trip.archived"
+	TripDisrupted              = "trip.disrupted"
+	AssistanceHandoffRequested = "assistance.handoff_requested"
+	AssistanceResolved         = "assistance.resolved"
 )
 
 // Event es el envelope CloudEvents simplificado usado por las 3 unidades.

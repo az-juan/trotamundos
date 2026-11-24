@@ -40,6 +40,14 @@ func (s *Server) moreRoutes(r chi.Router) {
 	r.Get("/bookings", s.listBookings)
 	r.Post("/bookings", s.createBooking)
 	r.Post("/webhooks/{provider}", s.webhook)
+
+	// Inicio parcial Fase 1: contratos internos del Asistente Virtual (ADR-109/110/113)
+	r.Post("/internal/assistance/cases", s.openAssistanceCase)
+	r.Get("/internal/assistance/cases", s.listAssistanceCases)
+	r.Get("/internal/assistance/cases/{id}", s.getAssistanceCase)
+	r.Post("/internal/assistance/cases/{id}/handoff", s.handoffAssistanceCase)
+	r.Post("/internal/assistance/cases/{id}/resolve", s.resolveAssistanceCase)
+	r.Post("/internal/assistance/tier1", s.recordTier1Resolution)
 }
 
 func (s *Server) verifyCredentials(w http.ResponseWriter, r *http.Request) {

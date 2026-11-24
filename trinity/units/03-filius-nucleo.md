@@ -18,8 +18,8 @@ encargado de enriquecerlas con los proveedores externos.
   - **Viajeros (Traveler)**; **compartir itinerario** con permisos de visualización (QA-10, FR-8);
     **deep-linking** a apps de terceros (FR-6).
   - Publica hechos ricos `booking.confirmed` / `trip.*` (con retry en memoria `Exponential Backoff`, ADR-108); consume `booking.discovered` (crea la reserva desde el correo).
-- **assistance/** (Fase 1, ADR-110) — agregado **`AssistanceCase`** con estados
-  `open → handed_off → resolved → closed` (`expired` si vence el token). Lo crea Pater por REST; el
+- **assistance/** (Activo en inicio parcial de Fase 1, ADR-110/113) — agregado **`AssistanceCase`** con estados
+  `open → handed_off → resolved → closed` (`expired` si vence el token). Lo invoca Pater por REST (`POST /internal/assistance/cases`); el
   módulo publica `assistance.handoff_requested` / `assistance.resolved` en la arista NATS existente y
   emite el `context_token` opaco en Redis (TTL 15 min, un solo uso) para la derivación vía FR-6.
 - **integration/** — adaptación a proveedores heterogéneos (aerolíneas, hoteles, rentadoras):

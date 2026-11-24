@@ -8,6 +8,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type FiliusAssistanceCase struct {
+	ID         pgtype.UUID        `json:"id"`
+	UserID     pgtype.UUID        `json:"user_id"`
+	TripID     pgtype.UUID        `json:"trip_id"`
+	BookingID  pgtype.UUID        `json:"booking_id"`
+	Status     string             `json:"status"`
+	Reason     string             `json:"reason"`
+	Severity   string             `json:"severity"`
+	AgencyID   pgtype.Text        `json:"agency_id"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
+}
+
 type FiliusBooking struct {
 	ID          pgtype.UUID        `json:"id"`
 	TripID      pgtype.UUID        `json:"trip_id"`
