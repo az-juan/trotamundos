@@ -212,6 +212,19 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA spiritus GRANT SELECT, INSERT, UPDATE, DELETE
 
 
 -- -----------------------------------------------------------------------------
+-- 7. Seed de desarrollo local (usuario dev@trotamundos.app)
+-- -----------------------------------------------------------------------------
+INSERT INTO filius.users (id, email, password_hash, display_name, preferences)
+VALUES (
+    '00000000-0000-0000-0000-000000000001',
+    'dev@trotamundos.app',
+    crypt('dev', gen_salt('bf')),
+    'Viajero Dev',
+    '{"locale":"es","currency":"USD","gps_radius_km":50}'::jsonb
+)
+ON CONFLICT DO NOTHING;
+
+-- -----------------------------------------------------------------------------
 -- 8. Datos de demostración del prototipo HTMX/sqlc (ADR-111)
 -- -----------------------------------------------------------------------------
 INSERT INTO filius.trips (id, user_id, name, status, start_date, end_date)
@@ -238,16 +251,3 @@ ON CONFLICT (user_id, sender) DO NOTHING;
 INSERT INTO spiritus.mailboxes (user_id, provider, email)
 VALUES ('00000000-0000-0000-0000-000000000001', 'gmail', 'dev@trotamundos.app')
 ON CONFLICT (user_id, email) DO NOTHING;
-
--- -----------------------------------------------------------------------------
--- 7. Seed de desarrollo local (usuario dev@trotamundos.app)
--- -----------------------------------------------------------------------------
-INSERT INTO filius.users (id, email, password_hash, display_name, preferences)
-VALUES (
-    '00000000-0000-0000-0000-000000000001',
-    'dev@trotamundos.app',
-    crypt('dev', gen_salt('bf')),
-    'Viajero Dev',
-    '{"locale":"es","currency":"USD","gps_radius_km":50}'::jsonb
-)
-ON CONFLICT (email) DO NOTHING;

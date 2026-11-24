@@ -59,6 +59,17 @@ DECLARE
   v_provider TEXT; v_type TEXT; v_ref TEXT;
   v_lat DOUBLE PRECISION; v_lon DOUBLE PRECISION; v_persona TEXT;
 BEGIN
+  -- Garantiza que el usuario de demostración exista incluso si init.sql falló previamente.
+  INSERT INTO filius.users (id, email, password_hash, display_name, preferences)
+  VALUES (
+    uid,
+    'dev@trotamundos.app',
+    crypt('dev', gen_salt('bf')),
+    'Viajero Dev',
+    '{"locale":"es","currency":"USD","gps_radius_km":50}'::jsonb
+  )
+  ON CONFLICT DO NOTHING;
+
   -- Permutación aleatoria: 20 viajes, 20 destinos distintos.
   SELECT ARRAY(SELECT g FROM generate_series(1, array_length(destinos, 1)) AS g
                ORDER BY random()) INTO orden;

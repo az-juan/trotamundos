@@ -10,7 +10,7 @@ if ! $COMPOSE ps --services --status running | grep -qx postgres; then
   echo "PostgreSQL no está corriendo: levantando docker compose (postgres)..."
   $COMPOSE up -d postgres >/dev/null
   for _ in $(seq 1 30); do
-    if $COMPOSE exec -T postgres psql -U pater_app -d trotamundos -tAc "SELECT 1 FROM filius.users LIMIT 1" >/dev/null 2>&1; then
+    if $COMPOSE exec -T postgres psql -h 127.0.0.1 -U pater_app -d trotamundos -tAc "SELECT 1 FROM filius.users LIMIT 1" 2>/dev/null | grep -qx 1; then
       break
     fi
     sleep 1
