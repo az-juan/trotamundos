@@ -9,12 +9,8 @@ COMPOSE="docker compose -f ${ROOT}/fase_0/deploy/docker-compose.yml"
 HURL="${HURL:-hurl}"
 
 if ! command -v "$HURL" >/dev/null 2>&1; then
-  if [ -x /home/azjuan/apps/hurl-8.0.1-x86_64-unknown-linux-gnu/bin/hurl ]; then
-    HURL=/home/azjuan/apps/hurl-8.0.1-x86_64-unknown-linux-gnu/bin/hurl
-  else
-    echo "Hurl no encontrado: instala hurl o define HURL=/ruta/a/hurl" >&2
-    exit 1
-  fi
+  echo "Hurl no encontrado: instala hurl o define HURL=/ruta/a/hurl" >&2
+  exit 1
 fi
 
 # Preflight: si el compose está detenido, el DSN 127.0.0.1:55432 da "connection refused".

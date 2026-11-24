@@ -7,8 +7,15 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE="docker compose -f ${ROOT}/fase_0/deploy/docker-compose.yml"
 
 if ! $COMPOSE ps --services --status running | grep -qx postgres; then
-  echo "PostgreSQL no está corriendo: docker compose -f fase_0/deploy/docker-compose.yml up -d postgres" >&2
-  exit 1
+  echo "PostgreSQL no está corriendo: levantando docker compose (postgres)..."
+  $COMPOSE up -d postgres >/dev/null
+  for _ in $(seq 1 30); do
+    if $COMPOSE exec -T postgres psql -U pater_app -d trotamundos -tAc "SELECT 1 FROM filius.users LIMIT 1" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+  done
+  echo "PostgreSQL iniciado automáticamente y listo en 127.0.0.1:55432."
 fi
 
 echo "Generando datos de demostración variados…"
